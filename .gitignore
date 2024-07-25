@@ -1,0 +1,7 @@
+build
+out
+.*
+
+# Ignore all folders that start with "ignore" to be able to create temporary folders holding temporary data.
+ignore*/
+*.*ignore

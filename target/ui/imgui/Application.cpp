@@ -18,8 +18,6 @@
 #include "Application.h"
 
 
-
-
 std::pair<bool, std::string> CApplication::Start(CApplication* papplication)
 {
    int iResult = CApplication::Main();
