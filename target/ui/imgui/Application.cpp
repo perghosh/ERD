@@ -126,8 +126,8 @@ int CApplication::Main()
    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
    // Main loop
-   bool done = false;
-   while(!done)
+   bool bDone = false;
+   while(!bDone)
    {
       // Poll and handle messages (inputs, window resize, etc.)
       // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -137,10 +137,9 @@ int CApplication::Main()
          ::TranslateMessage(&msg);
          ::DispatchMessage(&msg);
          if(msg.message == WM_QUIT)
-            done = true;
+            bDone = true;
       }
-      if(done)
-         break;
+      if(bDone) { break; }
 
       // Handle window screen locked
       if(g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
