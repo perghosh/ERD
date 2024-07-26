@@ -56,6 +56,29 @@ static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
 
+
+/**
+ * \brief
+ *
+ *
+ */
+struct D3D
+{
+   // ## construction -------------------------------------------------------------
+
+   D3D() {}
+   ~D3D() {}
+
+   void SetFrameIndex(unsigned int uFrameIndex) { m_uFrameIndex = uFrameIndex; }
+   unsigned int GetFrameIndex() const { return m_uFrameIndex; }
+
+   // ## attributes
+   unsigned int m_uFrameIndex = 0;
+   int m_iSomeVariable;				///< [insert comment here]
+};
+
+
+
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
