@@ -33,12 +33,14 @@ if( USE_TARGET_ )
    set(TARGET_NAME_ ${PROJECT_NAME})
 
    add_executable(${TARGET_NAME_}
+      "${source_application_root}"
       "${ERD_IMGUI_}"
       "${external_imgui}"
       "${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_win32.cpp"
       "${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_dx12.cpp"
    )
 
+   target_include_directories(${TARGET_NAME_} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../source)
    target_include_directories(${TARGET_NAME_} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../external)
    target_include_directories(${TARGET_NAME_} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../external/imgui)
    target_link_libraries(${TARGET_NAME_} PRIVATE "d3d12.lib" "dxgi.lib" "d3dcompiler.lib")

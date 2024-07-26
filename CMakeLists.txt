@@ -14,11 +14,6 @@ endif()
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 
-project ("ERD")
-
-# Add source to this project's executable.
-add_executable (ERD "ERD.cpp" "ERD.h")
-
 set(CMAKE_CXX_STANDARD 20)
 
 # TODO: Add tests and install targets if needed.

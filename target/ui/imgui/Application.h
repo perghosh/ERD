@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 
+#include "application/root/Application.h"
+
 
 /**
  * \brief
@@ -15,7 +17,7 @@
  \code
  \endcode
  */
-class CApplication
+class CApplication : public application::root::CApplication
 {
    // ## construction -------------------------------------------------------------
 public:
