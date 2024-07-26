@@ -39,19 +39,15 @@ struct FrameContext
 // Data
 static int const                    NUM_FRAMES_IN_FLIGHT = 3;
 static FrameContext                 g_frameContext[NUM_FRAMES_IN_FLIGHT] = {};
-static UINT                         g_frameIndex = 0;    // ok
 
 static int const                    NUM_BACK_BUFFERS = 3;
-//static ID3D12Device* g_pd3dDevice = nullptr;                 // work
 static ID3D12DescriptorHeap* g_pd3dRtvDescHeap = nullptr;
 static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
 static ID3D12CommandQueue* g_pd3dCommandQueue = nullptr;
 static ID3D12GraphicsCommandList* g_pd3dCommandList = nullptr;
 static ID3D12Fence* g_fence = nullptr;
 static HANDLE                       g_fenceEvent = nullptr;
-static UINT64                       g_fenceLastSignaledValue = 0;    // ok
 static IDXGISwapChain3* g_pSwapChain = nullptr;
-static bool                         g_SwapChainOccluded = false;         // ok
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
@@ -177,11 +173,6 @@ int CApplication::Main()
       if(bDone) { break; }
 
       // Handle window screen locked
-      /*if(g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-      {
-         ::Sleep(10);
-         continue;
-      }*/
 
       if (d3d_g.GetSwapChainOccluded() && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
       {
@@ -189,7 +180,6 @@ int CApplication::Main()
          continue;
       }
 
-      //g_SwapChainOccluded = false;
       d3d_g.SetSwapChainOccluded(false);
 
       // Start the Dear ImGui frame
@@ -267,16 +257,13 @@ int CApplication::Main()
       // Present
       HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
       //HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
-      //g_SwapChainOccluded = ( hr == DXGI_STATUS_OCCLUDED );
 
       d3d_g.SetSwapChainOccluded(hr == DXGI_STATUS_OCCLUDED);
 
-      //UINT64 fenceValue = g_fenceLastSignaledValue + 1;
       UINT64 fenceValue = d3d_g.GetFenceLastSignaledValue() + 1;
 
       g_pd3dCommandQueue->Signal(g_fence, fenceValue);
 
-      //g_fenceLastSignaledValue = fenceValue;
       d3d_g.SetFenceLastSignaledValue(fenceValue);
 
       frameCtx->FenceValue = fenceValue;
@@ -463,7 +450,6 @@ void WaitForLastSubmittedFrame()
 {
    
 
-   //FrameContext* frameCtx = &g_frameContext[g_frameIndex % NUM_FRAMES_IN_FLIGHT];
    FrameContext* frameCtx = &g_frameContext[d3d_g.GetFrameIndex() % NUM_FRAMES_IN_FLIGHT];
 
    UINT64 fenceValue = frameCtx->FenceValue;
@@ -480,11 +466,7 @@ void WaitForLastSubmittedFrame()
 
 FrameContext* WaitForNextFrameResources()
 {
-   //UINT nextFrameIndex = g_frameIndex + 1;
-   //g_frameIndex = nextFrameIndex;
-
    UINT nextFrameIndex = d3d_g.GetFrameIndex() + 1;
-
    d3d_g.SetFrameIndex(nextFrameIndex);
 
    HANDLE waitableObjects[] = { g_hSwapChainWaitableObject, nullptr };
