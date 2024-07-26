@@ -39,19 +39,19 @@ struct FrameContext
 // Data
 static int const                    NUM_FRAMES_IN_FLIGHT = 3;
 static FrameContext                 g_frameContext[NUM_FRAMES_IN_FLIGHT] = {};
-static UINT                         g_frameIndex = 0;
+static UINT                         g_frameIndex = 0;    // ok
 
 static int const                    NUM_BACK_BUFFERS = 3;
-static ID3D12Device* g_pd3dDevice = nullptr;
+//static ID3D12Device* g_pd3dDevice = nullptr;                 // work
 static ID3D12DescriptorHeap* g_pd3dRtvDescHeap = nullptr;
 static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
 static ID3D12CommandQueue* g_pd3dCommandQueue = nullptr;
 static ID3D12GraphicsCommandList* g_pd3dCommandList = nullptr;
 static ID3D12Fence* g_fence = nullptr;
 static HANDLE                       g_fenceEvent = nullptr;
-static UINT64                       g_fenceLastSignaledValue = 0;
+static UINT64                       g_fenceLastSignaledValue = 0;    // ok
 static IDXGISwapChain3* g_pSwapChain = nullptr;
-static bool                         g_SwapChainOccluded = false;
+static bool                         g_SwapChainOccluded = false;         // ok
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFERS] = {};
@@ -72,12 +72,24 @@ struct D3D
    void SetFrameIndex(unsigned int uFrameIndex) { m_uFrameIndex = uFrameIndex; }
    unsigned int GetFrameIndex() const { return m_uFrameIndex; }
 
+   void SetFenceLastSignaledValue(uint64_t uFenceLastSignaledValue) { m_uFenceLastSignaledValue = uFenceLastSignaledValue; }
+   uint64_t GetFenceLastSignaledValue() const { return m_uFenceLastSignaledValue; }
+
+   void SetSwapChainOccluded(bool bSwapChainOccluded) { m_bSwapChainOccluded = bSwapChainOccluded; }
+   bool GetSwapChainOccluded() const { return m_bSwapChainOccluded; }
+
+   void SetDevice(ID3D12Device* pid3d12device) { m_pid3d12device = pid3d12device; }
+   ID3D12Device* GetDevice() const { return m_pid3d12device; }
+   ID3D12Device** GetDeviceAddress() { return &m_pid3d12device; }
+
    // ## attributes
    unsigned int m_uFrameIndex = 0;
-   int m_iSomeVariable;				///< [insert comment here]
+   uint64_t m_uFenceLastSignaledValue = 0;
+   bool m_bSwapChainOccluded = false;
+   ID3D12Device* m_pid3d12device = nullptr;
 };
 
-
+D3D d3d_g;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
@@ -122,7 +134,7 @@ int CApplication::Main()
 
    // Setup Platform/Renderer backends
    ImGui_ImplWin32_Init(hwnd);
-   ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT,
+   ImGui_ImplDX12_Init(d3d_g.GetDevice(), NUM_FRAMES_IN_FLIGHT,
       DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
       g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
       g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
@@ -165,12 +177,20 @@ int CApplication::Main()
       if(bDone) { break; }
 
       // Handle window screen locked
-      if(g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+      /*if(g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+      {
+         ::Sleep(10);
+         continue;
+      }*/
+
+      if (d3d_g.GetSwapChainOccluded() && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
       {
          ::Sleep(10);
          continue;
       }
-      g_SwapChainOccluded = false;
+
+      //g_SwapChainOccluded = false;
+      d3d_g.SetSwapChainOccluded(false);
 
       // Start the Dear ImGui frame
       ImGui_ImplDX12_NewFrame();
@@ -247,11 +267,18 @@ int CApplication::Main()
       // Present
       HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
       //HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
-      g_SwapChainOccluded = ( hr == DXGI_STATUS_OCCLUDED );
+      //g_SwapChainOccluded = ( hr == DXGI_STATUS_OCCLUDED );
 
-      UINT64 fenceValue = g_fenceLastSignaledValue + 1;
+      d3d_g.SetSwapChainOccluded(hr == DXGI_STATUS_OCCLUDED);
+
+      //UINT64 fenceValue = g_fenceLastSignaledValue + 1;
+      UINT64 fenceValue = d3d_g.GetFenceLastSignaledValue() + 1;
+
       g_pd3dCommandQueue->Signal(g_fence, fenceValue);
-      g_fenceLastSignaledValue = fenceValue;
+
+      //g_fenceLastSignaledValue = fenceValue;
+      d3d_g.SetFenceLastSignaledValue(fenceValue);
+
       frameCtx->FenceValue = fenceValue;
    }
 
@@ -300,15 +327,14 @@ bool CreateDeviceD3D(HWND hWnd)
 
    // Create device
    D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-   if(D3D12CreateDevice(nullptr, featureLevel, IID_PPV_ARGS(&g_pd3dDevice)) != S_OK)
-      return false;
+   if(D3D12CreateDevice(nullptr, featureLevel, IID_PPV_ARGS(d3d_g.GetDeviceAddress())) != S_OK) return false;
 
    // [DEBUG] Setup debug interface to break on any warnings/errors
 #ifdef DX12_ENABLE_DEBUG_LAYER
    if(pdx12Debug != nullptr)
    {
       ID3D12InfoQueue* pInfoQueue = nullptr;
-      g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
+      d3d_g.GetDevice()->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
       pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
       pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
       pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
@@ -323,10 +349,10 @@ bool CreateDeviceD3D(HWND hWnd)
       desc.NumDescriptors = NUM_BACK_BUFFERS;
       desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
       desc.NodeMask = 1;
-      if(g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dRtvDescHeap)) != S_OK)
+      if(d3d_g.GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dRtvDescHeap)) != S_OK)
          return false;
 
-      SIZE_T rtvDescriptorSize = g_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+      SIZE_T rtvDescriptorSize = d3d_g.GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
       D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = g_pd3dRtvDescHeap->GetCPUDescriptorHandleForHeapStart();
       for(UINT i = 0; i < NUM_BACK_BUFFERS; i++)
       {
@@ -340,7 +366,7 @@ bool CreateDeviceD3D(HWND hWnd)
       desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
       desc.NumDescriptors = 1;
       desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      if(g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap)) != S_OK)
+      if(d3d_g.GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap)) != S_OK)
          return false;
    }
 
@@ -349,19 +375,19 @@ bool CreateDeviceD3D(HWND hWnd)
       desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
       desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
       desc.NodeMask = 1;
-      if(g_pd3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&g_pd3dCommandQueue)) != S_OK)
+      if(d3d_g.GetDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&g_pd3dCommandQueue)) != S_OK)
          return false;
    }
 
    for(UINT i = 0; i < NUM_FRAMES_IN_FLIGHT; i++)
-      if(g_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g_frameContext[i].CommandAllocator)) != S_OK)
+      if(d3d_g.GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g_frameContext[i].CommandAllocator)) != S_OK)
          return false;
 
-   if(g_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frameContext[0].CommandAllocator, nullptr, IID_PPV_ARGS(&g_pd3dCommandList)) != S_OK ||
+   if(d3d_g.GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frameContext[0].CommandAllocator, nullptr, IID_PPV_ARGS(&g_pd3dCommandList)) != S_OK ||
       g_pd3dCommandList->Close() != S_OK)
       return false;
 
-   if(g_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence)) != S_OK)
+   if(d3d_g.GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence)) != S_OK)
       return false;
 
    g_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -400,7 +426,7 @@ void CleanupDeviceD3D()
    if(g_pd3dSrvDescHeap) { g_pd3dSrvDescHeap->Release(); g_pd3dSrvDescHeap = nullptr; }
    if(g_fence) { g_fence->Release(); g_fence = nullptr; }
    if(g_fenceEvent) { CloseHandle(g_fenceEvent); g_fenceEvent = nullptr; }
-   if(g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
+   if(d3d_g.GetDevice() != nullptr) { d3d_g.GetDevice()->Release(); d3d_g.SetDevice(nullptr); }
 
 #ifdef DX12_ENABLE_DEBUG_LAYER
    IDXGIDebug1* pDebug = nullptr;
@@ -418,7 +444,7 @@ void CreateRenderTarget()
    {
       ID3D12Resource* pBackBuffer = nullptr;
       g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
-      g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, g_mainRenderTargetDescriptor[i]);
+      d3d_g.GetDevice()->CreateRenderTargetView(pBackBuffer, nullptr, g_mainRenderTargetDescriptor[i]);
       g_mainRenderTargetResource[i] = pBackBuffer;
    }
 }
@@ -431,9 +457,14 @@ void CleanupRenderTarget()
       if(g_mainRenderTargetResource[i]) { g_mainRenderTargetResource[i]->Release(); g_mainRenderTargetResource[i] = nullptr; }
 }
 
+
+
 void WaitForLastSubmittedFrame()
 {
-   FrameContext* frameCtx = &g_frameContext[g_frameIndex % NUM_FRAMES_IN_FLIGHT];
+   
+
+   //FrameContext* frameCtx = &g_frameContext[g_frameIndex % NUM_FRAMES_IN_FLIGHT];
+   FrameContext* frameCtx = &g_frameContext[d3d_g.GetFrameIndex() % NUM_FRAMES_IN_FLIGHT];
 
    UINT64 fenceValue = frameCtx->FenceValue;
    if(fenceValue == 0)
@@ -449,8 +480,12 @@ void WaitForLastSubmittedFrame()
 
 FrameContext* WaitForNextFrameResources()
 {
-   UINT nextFrameIndex = g_frameIndex + 1;
-   g_frameIndex = nextFrameIndex;
+   //UINT nextFrameIndex = g_frameIndex + 1;
+   //g_frameIndex = nextFrameIndex;
+
+   UINT nextFrameIndex = d3d_g.GetFrameIndex() + 1;
+
+   d3d_g.SetFrameIndex(nextFrameIndex);
 
    HANDLE waitableObjects[] = { g_hSwapChainWaitableObject, nullptr };
    DWORD numWaitableObjects = 1;
@@ -486,7 +521,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
    switch(msg)
    {
    case WM_SIZE:
-      if(g_pd3dDevice != nullptr && wParam != SIZE_MINIMIZED)
+      if(d3d_g.GetDevice() != nullptr && wParam != SIZE_MINIMIZED)
       {
          WaitForLastSubmittedFrame();
          CleanupRenderTarget();
