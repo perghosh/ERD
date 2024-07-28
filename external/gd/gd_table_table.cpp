@@ -3303,7 +3303,7 @@ void table::swap( uint64_t uRow1, uint64_t uRow2 )
    auto pRow2 = row_get( uRow2 );                                              // pointer to second row data
 
    // ## swap data between rows
-   for( auto i = 0; i < uCount128; i++ )
+   for( unsigned u = 0; u < uCount128; u++ )
    {
 #ifdef GD_X86X
       __m128i iSwapData = _mm_loadu_si128( reinterpret_cast<const __m128i* >( pRow1 ) );

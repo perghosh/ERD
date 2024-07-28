@@ -1,7 +1,5 @@
 #pragma once
 
-#define CATCH_AMALGAMATED_CUSTOM_MAIN
-
 #include <utility>
 #include <iostream>
 
