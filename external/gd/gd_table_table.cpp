@@ -1063,6 +1063,40 @@ void table::row_add(const unsigned* puColumn, std::string_view& stringRowValue, 
 }
 
 /** ---------------------------------------------------------------------------
+ * @brief add cell values from string where string is divided based on character sent
+ * @param uFirst index to first column where first value are inserted
+ * @param stringRowValue string with values
+ * @param chSplit character that separates values
+ * @param callback_ callback used to modify parsed values if needed
+ * @return bool true if ok, false if error
+ */
+bool table::row_add(unsigned uFirst, const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse)
+{                                                                                                  assert( empty( tag_raw{} ) == false);
+   uint64_t uRow = m_uRowCount;
+   row_add();
+   if( is_null() == true ) { row_set_null( uRow ); }
+   return row_set( uRow, uFirst, stringRowValue, chSplit, callback_, tag_parse{} );
+}
+
+
+
+/** ---------------------------------------------------------------------------
+ * @brief add cell values from string where string is divided based on character sent
+ * @param puColumn pointer to column indexes where values are put
+ * @param stringRowValue string with values
+ * @param chSplit character that separates values
+ * @param callback_ callback used to modify parsed values if needed
+ * @return bool true if ok, false if error
+ */
+bool table::row_add(const unsigned* puColumn, std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse)
+{
+   uint64_t uRow = m_uRowCount;
+   row_add();
+   if( is_null() == true ) { row_set_null( uRow ); }
+   return row_set( uRow, puColumn, stringRowValue, chSplit, callback_, tag_parse{} );
+}
+
+/** ---------------------------------------------------------------------------
  * @brief Add values from arguments object where names in arguments match column names
  * @param argumentsRow values added to row
 */
@@ -1344,6 +1378,89 @@ void table::row_set(uint64_t uRow, const unsigned* puColumn, const std::string_v
       }
    }
 }
+
+/** ---------------------------------------------------------------------------
+ * @brief set cell values from string where string is divided based on character sent
+ * @param uRow Row number where cell values are set
+ * @param uFirst column where to start to insert values
+ * @param stringRowValue string with values
+ * @param chSplit character that separates values
+ */
+bool table::row_set(uint64_t uRow, unsigned uFirst, const std::string_view& stringRowValue, char chSplit,std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse)
+{
+   std::vector<std::size_t> vectorOffset;       // positions for each column in string
+   std::vector<std::string> vectorValue;        // cell values
+
+   gd::utf8::offset( stringRowValue, chSplit, vectorOffset );                  // offset column positions, they are divided with 'chSplit'
+   if( stringRowValue.back() != chSplit ) vectorOffset.push_back(stringRowValue.length());// add last position to add last section without code after loop
+
+   gd::utf8::split( stringRowValue, vectorOffset, vectorValue );
+
+   if( callback_( vectorValue ) == true )
+   {
+      unsigned uCoulmnCount = (unsigned)vectorValue.size() + uFirst;
+      if( uCoulmnCount > get_column_count() ) { uCoulmnCount = get_column_count(); } // not more than number of columns in table?
+      for( unsigned uColumn = uFirst, uIndex = 0; uColumn < uCoulmnCount; uColumn++, uIndex++ )
+      {
+         const auto& stringValue = vectorValue.at( uIndex );
+         if( stringValue.empty() == false )
+         {
+            cell_set( uRow, uColumn, stringValue, tag_convert{} );
+         }
+         else
+         {
+            // if null values in table then set to null, otherwise skip it
+            if( is_null() == true ) { cell_set_null( uRow, uColumn ); }
+         }
+      }
+
+      return true;
+   }
+
+   return false;
+}
+
+
+/** ---------------------------------------------------------------------------
+ * @brief set cell values from string where string is divided based on character sent
+ * @param uRow Row number where cell values are set
+ * @param puColumn pointer to column indexes where to place column values
+ *        @note make shoure that there are enough values for values in string, this is not checked        
+ * @param stringRowValue string with values
+ * @param chSplit character that separates values
+ */
+bool table::row_set(uint64_t uRow, const unsigned* puColumn, const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse)
+{
+   std::vector<std::size_t> vectorOffset;       // positions for each column in string
+   std::vector<std::string> vectorValue;        // cell values
+
+   gd::utf8::offset( stringRowValue, chSplit, vectorOffset );                  // offset column positions, they are divided with 'chSplit'
+   if( stringRowValue.back() != chSplit ) vectorOffset.push_back(stringRowValue.length());// add last position to add last section without code after loop
+
+   gd::utf8::split( stringRowValue, vectorOffset, vectorValue );
+
+   if( callback_( vectorValue ) == true )
+   {
+      unsigned uCount = (unsigned)vectorValue.size();
+      for( unsigned uIndex = 0; uIndex < uCount; uIndex++ )
+      {                                                                                            assert( puColumn[uIndex] < get_column_count() );
+         const auto stringValue = vectorValue.at( uIndex );
+         if( stringValue.empty() == false )
+         {
+            cell_set( uRow, puColumn[uIndex], stringValue, tag_convert{});
+         }
+         else
+         {
+            // if null values in table then set to null, otherwise skip it
+            if( is_null() == true ) { cell_set_null( uRow, puColumn[uIndex] ); }
+         }
+      }
+      return true;
+   }
+
+   return false;
+}
+
 
 
 /** ---------------------------------------------------------------------------

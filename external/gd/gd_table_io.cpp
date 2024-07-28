@@ -433,7 +433,7 @@ void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const 
 
       unsigned uColumn = 0;
 
-      for( unsigned uColumn = 0, uColumnMax = vectorValue.size(); uColumn < uColumnMax; uColumn++ )
+      for( unsigned uColumn = 0, uColumnMax = (unsigned)vectorValue.size(); uColumn < uColumnMax; uColumn++ )
       {
          if( uColumn > 0 ) stringResult += ",";                                // add `,` to separate columns
 
@@ -548,7 +548,7 @@ void to_string_s( const TABLE& table, uint64_t uBegin, uint64_t uCount, std::vec
    // ## calculate total length needed for each row in characters
    unsigned uTotalLength = std::accumulate( std::begin(vectorWidth), std::end(vectorWidth), 0u );
    uTotalLength += 2 * (sizeof(" |") - 1);
-   uTotalLength += (vectorWidth.size() - 1) * (sizeof(" | ") - 1);
+   uTotalLength += ((unsigned)vectorWidth.size() - 1) * (sizeof(" | ") - 1);
 
 
    // ## Generate line divider
@@ -697,7 +697,7 @@ void to_string_s( const TABLE& table, uint64_t uBegin, uint64_t uCount, std::vec
    // ## calculate total length needed for each row in characters
    unsigned uTotalLength = std::accumulate( std::begin(vectorWidth), std::end(vectorWidth), 0u );
    uTotalLength += 2 * (sizeof(" |") - 1);
-   uTotalLength += (vectorWidth.size() - 1) * (sizeof(" | ") - 1);
+   uTotalLength += ((unsigned)vectorWidth.size() - 1) * (sizeof(" | ") - 1);
 
 
    // ## Generate line divider

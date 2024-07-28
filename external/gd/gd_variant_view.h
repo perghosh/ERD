@@ -158,7 +158,8 @@ public:
    void assign( float v  )    { _set_value( v ); }
    void assign( double v )    { _set_value( v ); }
    void assign( const char* v ) { _set_value( v ); }
-   void assign( const char* v, unsigned uLength ) { _set_value( v, uLength ); }
+   //void assign( const char* v, uint32_t uLength ) { _set_value( v, uLength ); }
+   void assign( const char* v, uint64_t uLength ) { assert( uLength < UINT_MAX ); _set_value( v, (uint32_t)uLength ); }
    void assign( const std::string_view& v ) { _set_value( v.data(), v.length() ); }
 #if defined(__cpp_char8_t)
    void assign( const char8_t* v ) { _set_value( v ); }

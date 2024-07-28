@@ -570,14 +570,14 @@ table_column_buffer& table_column_buffer::column_add( const table_column_buffer*
 
       if( it->name() != 0 ) 
       {  
-         auto stringName = p_->column_get_name( std::distance( itBegin, it ) );
+         auto stringName = p_->column_get_name( (unsigned)std::distance( itBegin, it ) );
          auto uNameIndex = m_namesColumn.add( stringName );
          columnAdd.name( uNameIndex );
       }
 
       if( it->alias() != 0 ) 
       {  
-         auto stringAlias = p_->column_get_name( std::distance( itBegin, it ) );
+         auto stringAlias = p_->column_get_name( (unsigned)std::distance( itBegin, it ) );
          auto uAliasIndex = m_namesColumn.add( stringAlias );
          columnAdd.alias( uAliasIndex );
       }
@@ -788,7 +788,7 @@ void table_column_buffer::column_get(std::size_t uIndex, argument::column& colum
    column_.size( columnRead.size() );
    if( columnRead.name() != 0 ) 
    {  
-      auto stringName = column_get_name( uIndex );
+      auto stringName = column_get_name( (unsigned)uIndex );
       column_.name( stringName );
    }
 

@@ -7,6 +7,10 @@ project("ErdImgui" LANGUAGES CXX C)
 
 include(include_external)
 
+add_subdirectory("playground") # use this to test code for later use in web server
+add_subdirectory("tests") # tests to check logic in web server
+
+
 message( STATUS )
 message( STATUS "# ----- ------------------------------------------------------" )
 message( STATUS "# ----- ImGui applicaiton" )

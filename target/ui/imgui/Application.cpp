@@ -76,38 +76,38 @@ struct D3D
    ID3D12Device* GetDevice() const { return m_pid3d12device; }
    ID3D12Device** GetDeviceAddress() { return &m_pid3d12device; }
 
-   void SetRtvDescriptorHeap(ID3D12DescriptorHeap* pid3d12Rtvdescriptorheap) { m_pid3d12Rtvdescriptorheap = pid3d12Rtvdescriptorheap; }
+   void SetRtvDescriptorHeap(ID3D12DescriptorHeap* pid3d12Rtvdescriptorheap) { assert( m_pid3d12Rtvdescriptorheap == nullptr ); m_pid3d12Rtvdescriptorheap = pid3d12Rtvdescriptorheap; }
    ID3D12DescriptorHeap* GetRtvDescriptorHeap() const { return m_pid3d12Rtvdescriptorheap; }
    ID3D12DescriptorHeap** GetRtvDescriptorHeapAddress() { return &m_pid3d12Rtvdescriptorheap; }
 
-   void SetSrvDescriptorHeap(ID3D12DescriptorHeap* pid3d12Srvdescriptorheap) { m_pid3d12Srvdescriptorheap = pid3d12Srvdescriptorheap; }
+   void SetSrvDescriptorHeap(ID3D12DescriptorHeap* pid3d12Srvdescriptorheap) { assert( m_pid3d12Srvdescriptorheap == nullptr ); m_pid3d12Srvdescriptorheap = pid3d12Srvdescriptorheap; }
    ID3D12DescriptorHeap* GetSrvDescriptorHeap() const { return m_pid3d12Srvdescriptorheap; }
    ID3D12DescriptorHeap** GetSrvDescriptorHeapAddress() { return &m_pid3d12Srvdescriptorheap; }
 
-   void SetCommandQueue(ID3D12CommandQueue* pid3d12commandqueue) { m_pid3d12commandqueue = pid3d12commandqueue; }
+   void SetCommandQueue(ID3D12CommandQueue* pid3d12commandqueue) { assert( m_pid3d12commandqueue == nullptr ); m_pid3d12commandqueue = pid3d12commandqueue; }
    ID3D12CommandQueue* GetCommandQueue() const { return m_pid3d12commandqueue; }
    ID3D12CommandQueue** GetCommandQueueAddress() { return &m_pid3d12commandqueue; }
 
-   void SetCommandList(ID3D12GraphicsCommandList* pid3d12graphicscommandlist) { m_pid3d12graphicscommandlist = pid3d12graphicscommandlist; }
+   void SetCommandList(ID3D12GraphicsCommandList* pid3d12graphicscommandlist) { assert( m_pid3d12graphicscommandlist == nullptr ); m_pid3d12graphicscommandlist = pid3d12graphicscommandlist; }
    ID3D12GraphicsCommandList* GetCommandList() const { return m_pid3d12graphicscommandlist; }
    ID3D12GraphicsCommandList** GetCommandListAddress() { return &m_pid3d12graphicscommandlist; }
 
-   void SetFence(ID3D12Fence* pid3d12fence) { m_pid3d12fence = pid3d12fence; }
+   void SetFence(ID3D12Fence* pid3d12fence) { assert( m_pid3d12fence == nullptr ); m_pid3d12fence = pid3d12fence; }
    ID3D12Fence* GetFence() const { return m_pid3d12fence; }
    ID3D12Fence** GetFenceAddress() { return &m_pid3d12fence; }
 
 
 
    // ## attributes
-   unsigned int m_uFrameIndex = 0;
-   uint64_t m_uFenceLastSignaledValue = 0;
-   bool m_bSwapChainOccluded = false;
-   ID3D12Device* m_pid3d12device = nullptr;
+   unsigned       int m_uFrameIndex = 0;
+   uint64_t       m_uFenceLastSignaledValue = 0;
+   bool           m_bSwapChainOccluded = false;
+   ID3D12Device*  m_pid3d12device = nullptr;
    ID3D12DescriptorHeap* m_pid3d12Rtvdescriptorheap = nullptr;
    ID3D12DescriptorHeap* m_pid3d12Srvdescriptorheap = nullptr;
    ID3D12CommandQueue* m_pid3d12commandqueue = nullptr;
    ID3D12GraphicsCommandList* m_pid3d12graphicscommandlist = nullptr;
-   ID3D12Fence* m_pid3d12fence = nullptr;
+   ID3D12Fence*   m_pid3d12fence = nullptr;
 };
 
 D3D d3d_g;

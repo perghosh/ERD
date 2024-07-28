@@ -2630,6 +2630,35 @@ namespace gd {
       }
 
       /** ---------------------------------------------------------------------
+       * @brief Split string into vector of string parts for each split offset positions
+       * @param pbBegin start of string
+       * @param pbEnd end of string
+       * @param vectorSplit positions where to split string
+       * @param vectorPart string parts from splitting
+       */
+      void split(const char* pbBegin, const char* pbEnd, const std::vector<std::size_t>& vectorSplit, std::vector<std::string>& vectorPart)
+      {
+         std::size_t uTextSize = pbEnd - pbBegin; 
+         std::size_t uPosition = 0;
+         for(auto it : vectorSplit)
+         {
+            if(uPosition < uTextSize)
+            {  
+               auto uLength = it - uPosition;
+               vectorPart.push_back( std::string( pbBegin + uPosition, uLength ) );
+               uPosition = it + 1;
+            }
+            else
+            {
+               vectorPart.push_back( std::string() );
+            }
+         }
+
+         if( uPosition < uTextSize ) { vectorPart.push_back( std::string( pbBegin + uPosition, uTextSize - uPosition ) ); }
+      }
+
+
+      /** ---------------------------------------------------------------------
        * @brief Extract text betweend selected characters
        * @param puBegin start of text
        * @param puEnd end of text

@@ -795,12 +795,26 @@ namespace gd {
          split( stringText.data(), stringText.data() + stringText.length(), chSplitWith, vectorPart );
       }
 
+      // ### split into vector with `string_view`
+
       void split( const char* pbBegin, const char* pbEnd, const std::vector<std::size_t>& vectorSplit, std::vector<std::string_view>& vectorPart );
       inline void split(const std::string_view& stringText, const std::vector<std::size_t>& vectorSplit, std::vector<std::string_view>& vectorPart) {
          split( &(*stringText.begin()), stringText.data() + stringText.length(), vectorSplit, vectorPart );
       }
       inline std::vector<std::string_view> split(const std::string_view& stringText, const std::vector<std::size_t>& vectorSplit, tag_string_view) {
          std::vector<std::string_view> vectorPart;
+         split( &(*stringText.begin()), stringText.data() + stringText.length(), vectorSplit, vectorPart );
+         return vectorPart;
+      }
+
+      // ### split into vector with `string`
+
+      void split( const char* pbBegin, const char* pbEnd, const std::vector<std::size_t>& vectorSplit, std::vector<std::string>& vectorPart );
+      inline void split(const std::string_view& stringText, const std::vector<std::size_t>& vectorSplit, std::vector<std::string>& vectorPart) {
+         split( &(*stringText.begin()), stringText.data() + stringText.length(), vectorSplit, vectorPart );
+      }
+      inline std::vector<std::string> split(const std::string_view& stringText, const std::vector<std::size_t>& vectorSplit, tag_string) {
+         std::vector<std::string> vectorPart;
          split( &(*stringText.begin()), stringText.data() + stringText.length(), vectorSplit, vectorPart );
          return vectorPart;
       }

@@ -477,6 +477,9 @@ public:
    void row_add( unsigned uFirst, const std::string_view& stringRowValue, char chSplit, tag_parse );
    void row_add( const std::string_view& stringRowValue, char chSplit, tag_parse ) { row_add( 0, stringRowValue, chSplit, tag_parse{}); }
    void row_add( const unsigned* puColumn, std::string_view& stringRowValue, char chSplit, tag_parse );
+   bool row_add( unsigned uFirst, const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse );
+   bool row_add( const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse ) { return row_add( 0, stringRowValue, chSplit, callback_, tag_parse{}); }
+   bool row_add( const unsigned* puColumn, std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse );
    ///@}
 
    /// @name row_set                                                                                       {
@@ -499,6 +502,8 @@ public:
    void row_set( uint64_t uRow, const std::string_view& stringRowValue, char chSplit, tag_parse );
    void row_set( uint64_t uRow, unsigned uFirst, const std::string_view& stringRowValue, char chSplit, tag_parse );
    void row_set( uint64_t uRow, const unsigned* puColumn, const std::string_view& stringRowValue, char chSplit, tag_parse );
+   bool row_set( uint64_t uRow, unsigned uFirst, const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse );
+   bool row_set(uint64_t uRow, const unsigned* puColumn, const std::string_view& stringRowValue, char chSplit, std::function< bool( std::vector<std::string>& vectorValue )> callback_, tag_parse);
    void row_set_null( uint64_t uRow );
    void row_set_null( uint64_t uFrom, uint64_t uCount );
    void row_set_range( uint64_t uRow, const gd::variant_view variantviewSet, tag_convert ) { row_set_range( uRow, 0, get_column_count(), variantviewSet, tag_convert{}); }

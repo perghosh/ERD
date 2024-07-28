@@ -172,7 +172,7 @@ void aggregate<TABLE>::max( std::vector<unsigned>& vectorLength, uint64_t uBegin
    // ## iterate rows to check max length for values found in column
    if( uEndRow > m_ptable->get_row_count() ) { uEndRow = m_ptable->get_row_count(); }
 
-   unsigned uColumnCount = vectorLength.size() < m_ptable->get_column_count() ?  vectorLength.size() : m_ptable->get_column_count(); // number of columns to check
+   unsigned uColumnCount = (unsigned)vectorLength.size() < m_ptable->get_column_count() ? (unsigned)vectorLength.size() : m_ptable->get_column_count(); // number of columns to check
    for( uint64_t uRow = uBeginRow; uRow < uEndRow; uRow++ ) {
       for( unsigned uColumn = 0; uColumn < uColumnCount; uColumn++ ) {
          unsigned uValueLength = m_ptable->cell_get_length( uRow, uColumn );
@@ -235,7 +235,7 @@ TYPE aggregate<TABLE>::sum( unsigned uColumn, uint64_t uBeginRow, uint64_t uCoun
 
 template <typename TABLE>
 void aggregate<TABLE>::fix( std::vector<unsigned>& vectorLength, tag_text ) { assert( m_ptable != nullptr ); assert( vectorLength.empty() == false );
-   unsigned uColumnCount = vectorLength.size() < m_ptable->get_column_count() ?  vectorLength.size() : m_ptable->get_column_count(); // number of columns to check
+   unsigned uColumnCount = (unsigned)vectorLength.size() < m_ptable->get_column_count() ? (unsigned)vectorLength.size() : m_ptable->get_column_count(); // number of columns to check
    for( unsigned uColumn = 0; uColumn < uColumnCount; uColumn++ ) {
       auto uType = m_ptable->column_get_type( uColumn );
       if(gd::types::detail::is_binary(uType) == true) {
