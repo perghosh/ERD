@@ -4,5 +4,6 @@
 
 
 TEST_CASE( "[cache] first", "[cache]" ) {
+   std::cout << "test to write" << std::endl;
 }
 
