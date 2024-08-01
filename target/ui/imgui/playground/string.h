@@ -29,6 +29,7 @@ private:
 
 // ## operator -----------------------------------------------------------------
 public:
+   string& operator+=( const char* pbszText ) { append( pbszText ); return *this; }
    
 
 // ## methods ------------------------------------------------------------------
