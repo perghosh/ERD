@@ -27,6 +27,10 @@ TEST_CASE("hello", "[Kevin]") {
    stringPer += " 5";
 
    std::cout << stringPer.c_str() << std::endl;
+
+   stringPer = "nu var det slut";
+
+   std::cout << stringPer.c_str() << std::endl;
 }
 
 
