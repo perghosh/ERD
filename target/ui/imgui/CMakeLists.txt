@@ -29,6 +29,7 @@ endfunction()
 # core ERD imgui domain files
 file(GLOB ERD_IMGUI_ 
    *.cpp *.h                  # all cpp files in current directory
+   "window/*.h" "window/*.cpp"
 ) 
 
 

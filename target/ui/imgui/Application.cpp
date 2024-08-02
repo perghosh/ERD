@@ -17,6 +17,45 @@
 
 #include "Application.h"
 
+CApplication::~CApplication() 
+{
+   if(m_pframeMain != nullptr)
+   {
+      delete m_pframeMain;
+   }
+}
+
+
+std::pair<bool, std::string> CApplication::Main(int iArgumentCount, char* ppbszArgument[], std::function<bool(const std::string_view&, const gd::variant_view&)> process_)
+{
+
+   return application::root::CApplication::Main( iArgumentCount, ppbszArgument, nullptr );
+}
+
+std::pair<bool, std::string> CApplication::Initialize()
+{
+
+   return application::root::CApplication::Initialize();
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief call this before application is exited, place last cleanup in this
+ * @return true if ok, false and error information on error
+ */
+std::pair<bool, std::string> CApplication::Exit()
+{
+   if(m_pframeMain != nullptr)
+   {
+      m_pframeMain->Destroy();
+      delete m_pframeMain;
+      m_pframeMain = nullptr;
+   }
+
+   return application::root::CApplication::Exit();
+}
+
+
+
 
 std::pair<bool, std::string> CApplication::Start(CApplication* papplication)
 {
@@ -29,6 +68,8 @@ std::pair<bool, std::string> CApplication::Start(CApplication* papplication)
 
    return { true, "" };
 }
+
+
 
 struct FrameContext
 {
