@@ -1,5 +1,8 @@
 #pragma once
 
+#include <d3d12.h>
+#include <dxgi1_4.h>
+
 #include "Frame.h"
 
 
@@ -13,7 +16,7 @@
  */
 class CFrameD3D : public window::CFrame
 {
-
+public:
    struct FrameContext
    {
       ID3D12CommandAllocator* CommandAllocator;
@@ -45,7 +48,9 @@ class CFrameD3D : public window::CFrame
 
       // handle ---------------------------------------------------------------
       HANDLE GetFenceEvent() { return m_hFenceEvent; }
+      void SetFenceEvent( HANDLE hFenceEvent ) { m_hFenceEvent = hFenceEvent; }
       HANDLE GetSwapChainWaitableObject() { return m_hSwapChainWaitableObject; }
+      void SetSwapChainWaitableObjects( HANDLE hSwapChainWaitableObject ) { m_hSwapChainWaitableObject = hSwapChainWaitableObject; }
 
       // pointers -------------------------------------------------------------
 
@@ -77,12 +82,18 @@ class CFrameD3D : public window::CFrame
       ID3D12Fence* GetFence() const { return m_pid3d12fence; }
       ID3D12Fence** GetFenceAddress() { return &m_pid3d12fence; }
 
-      ID3D12Resource* GetResource() { return m_ppid3d12resource; }
-      FrameContext* GetFrameContext() { return &m_pframecontext; }
+      ID3D12Resource* GetResource( unsigned uIndex ) { assert( uIndex < NUM_BACK_BUFFERS ); return m_ppid3d12resource[uIndex]; }
+      void SetResource( unsigned uIndex, ID3D12Resource* p_ ) { m_ppid3d12resource[uIndex] = p_; }
+      FrameContext GetFrameContext( unsigned uIndex ) { assert( uIndex < NUM_FRAMES_IN_FLIGHT ); return m_pframecontext[uIndex]; }
+      FrameContext* GetFrameContextPointer( unsigned uIndex ) { assert( uIndex < NUM_FRAMES_IN_FLIGHT ); return &m_pframecontext[uIndex]; }
+      void SetFrameContextCommandAllocator( unsigned uIndex, ID3D12CommandAllocator* p_ ) { assert( uIndex < NUM_FRAMES_IN_FLIGHT ); m_pframecontext[uIndex].CommandAllocator = p_; }
+
+      D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle( unsigned uIndex ) const { assert( uIndex < NUM_BACK_BUFFERS ); return m_phDescriptorHandle[uIndex]; }
+      void SetDescriptorHandle( unsigned uIndex, D3D12_CPU_DESCRIPTOR_HANDLE hHandle ) { assert( uIndex < NUM_BACK_BUFFERS ); m_phDescriptorHandle[uIndex] = hHandle; }
 
 
-      inline constexpr int NUM_FRAMES_IN_FLIGHT = 3;
-      inline constexpr int NUM_BACK_BUFFERS = 3;
+      static const int NUM_FRAMES_IN_FLIGHT = 3;
+      static const int NUM_BACK_BUFFERS = 3;
 
       // ## attributes
       unsigned       int m_uFrameIndex = 0;
@@ -99,6 +110,7 @@ class CFrameD3D : public window::CFrame
       ID3D12Fence*   m_pid3d12fence = nullptr;
       ID3D12Resource* m_ppid3d12resource[NUM_BACK_BUFFERS] = {};
       FrameContext   m_pframecontext[NUM_FRAMES_IN_FLIGHT] = {};
+      D3D12_CPU_DESCRIPTOR_HANDLE m_phDescriptorHandle[NUM_BACK_BUFFERS] = {};
    };
 
 
@@ -159,6 +171,7 @@ public:
    void CreateRenderTarget( unsigned uBufferCount, D3D& d3d );
    void CleanupRenderTarget( unsigned uBufferCount, D3D& d3d );
    void WaitForLastSubmittedFrame( D3D& d3d );
+   FrameContext* WaitForNextFrameResources( D3D& d3d );
 
 
 };

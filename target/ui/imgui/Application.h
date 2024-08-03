@@ -31,7 +31,7 @@ public:
    CApplication& operator=(const CApplication& o) { common_construct(o); return *this; }
    CApplication& operator=(CApplication&& o) noexcept { common_construct(std::move(o)); return *this; }
 
-   ~CApplication() {}
+   ~CApplication();
 private:
    // common copy
    void common_construct(const CApplication& o) {}

@@ -6,7 +6,7 @@ std::pair<bool, std::string> CFrameD3D::CreateDeviceD3D( HWND hWnd, D3D& d3d )
    DXGI_SWAP_CHAIN_DESC1 dxscd_;
    {
       ZeroMemory(&dxscd_, sizeof(dxscd_));
-      dxscd_.BufferCount = NUM_BACK_BUFFERS;
+      dxscd_.BufferCount = D3D::NUM_BACK_BUFFERS;
       dxscd_.Width = 0;
       dxscd_.Height = 0;
       dxscd_.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -48,16 +48,16 @@ std::pair<bool, std::string> CFrameD3D::CreateDeviceD3D( HWND hWnd, D3D& d3d )
    {
       D3D12_DESCRIPTOR_HEAP_DESC desc = {};
       desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-      desc.NumDescriptors = NUM_BACK_BUFFERS;
+      desc.NumDescriptors = D3D::NUM_BACK_BUFFERS;
       desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
       desc.NodeMask = 1;
       if(d3d.GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(d3d.GetRtvDescriptorHeapAddress())) != S_OK) return { false, "Failed to run CreateDescriptorHeap" };
 
       SIZE_T rtvDescriptorSize = d3d.GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
       D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = d3d.GetRtvDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
-      for(UINT i = 0; i < NUM_BACK_BUFFERS; i++)
+      for(unsigned u = 0; u < D3D::NUM_BACK_BUFFERS; u++)
       {
-         g_mainRenderTargetDescriptor[i] = rtvHandle;
+         d3d.SetDescriptorHandle( u, rtvHandle );
          rtvHandle.ptr += rtvDescriptorSize;
       }
    }
@@ -75,18 +75,22 @@ std::pair<bool, std::string> CFrameD3D::CreateDeviceD3D( HWND hWnd, D3D& d3d )
       desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
       desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
       desc.NodeMask = 1;
-      if(d3d.GetDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(d3d.GetCommandQueueAddress())) != S_OK) { false, "Failed to run CreateCommandQueue" };
+      if(d3d.GetDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(d3d.GetCommandQueueAddress())) != S_OK) return { false, "Failed to run CreateCommandQueue" };
    }
 
-   for(UINT i = 0; i < NUM_FRAMES_IN_FLIGHT; i++)
-      if(d3d.GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g_frameContext[i].CommandAllocator)) != S_OK) return { false, "Failed to run CreateCommandAllocator" };
+   for(unsigned u = 0; u < D3D::NUM_FRAMES_IN_FLIGHT; u++)
+   {
+      FrameContext* pframecontext = d3d.GetFrameContextPointer( u );
+      if(d3d.GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pframecontext->CommandAllocator)) != S_OK) return {false, "Failed to run CreateCommandAllocator"};
+   }
 
-   if(d3d.GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frameContext[0].CommandAllocator, nullptr, IID_PPV_ARGS(d3d.GetCommandListAddress())) != S_OK || d3d.GetCommandList()->Close() != S_OK) return { false, "Failed to run CreateCommandList" };
+   if(d3d.GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.GetFrameContext(0).CommandAllocator, nullptr, IID_PPV_ARGS(d3d.GetCommandListAddress())) != S_OK || d3d.GetCommandList()->Close() != S_OK) return { false, "Failed to run CreateCommandList" };
 
    if(d3d.GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(d3d.GetFenceAddress())) != S_OK) return { false, "Failed to run CreateFence" };
 
-   g_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-   if(g_fenceEvent == nullptr) return { false, "Failed to run CreateEvent" };
+   auto fenceevent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+   if(fenceevent_ == nullptr) return { false, "Failed to run CreateEvent" };
+   d3d.SetFenceEvent( fenceevent_ );
 
    {
       IDXGIFactory4* dxgiFactory = nullptr;
@@ -96,11 +100,11 @@ std::pair<bool, std::string> CFrameD3D::CreateDeviceD3D( HWND hWnd, D3D& d3d )
       if(pidxgiswapchain1->QueryInterface(IID_PPV_ARGS(d3d.GetSwapChainAddress())) != S_OK) return { false, "Failed to run QueryInterface" };
       pidxgiswapchain1->Release();
       dxgiFactory->Release();
-      d3d.GetSwapChain()->SetMaximumFrameLatency(NUM_BACK_BUFFERS);
-      g_hSwapChainWaitableObject = d3d.GetSwapChain()->GetFrameLatencyWaitableObject();
+      d3d.GetSwapChain()->SetMaximumFrameLatency(D3D::NUM_BACK_BUFFERS);
+      d3d.SetSwapChainWaitableObjects( d3d.GetSwapChain()->GetFrameLatencyWaitableObject() );
    }
 
-   CreateRenderTarget();
+   CreateRenderTarget( D3D::NUM_BACK_BUFFERS, d3d );
 
    return { true, "" };
 }
@@ -108,22 +112,22 @@ std::pair<bool, std::string> CFrameD3D::CreateDeviceD3D( HWND hWnd, D3D& d3d )
 
 void CFrameD3D::CleanupDeviceD3D( D3D& d3d )
 {
-   CleanupRenderTarget();
+   CleanupRenderTarget( D3D::NUM_BACK_BUFFERS, d3d );
    if(d3d.GetSwapChain() != nullptr) { d3d.GetSwapChain()->SetFullscreenState(false, nullptr); d3d.GetSwapChain()->Release(); d3d.SetSwapChain( nullptr ); }
 
-   if(g_hSwapChainWaitableObject != nullptr) { CloseHandle(g_hSwapChainWaitableObject); }
+   if(d3d.GetSwapChainWaitableObject() != nullptr) { CloseHandle(d3d.GetSwapChainWaitableObject()); d3d.SetSwapChainWaitableObjects( nullptr ); }
 
-   for(UINT i = 0; i < NUM_FRAMES_IN_FLIGHT; i++)
+   for(unsigned u = 0; u < D3D::NUM_FRAMES_IN_FLIGHT; u++)
    {
-      if(g_frameContext[i].CommandAllocator) { g_frameContext[i].CommandAllocator->Release(); g_frameContext[i].CommandAllocator = nullptr; }
+      if( d3d.GetFrameContext( u ).CommandAllocator) { d3d.GetFrameContext( u ).CommandAllocator->Release(); d3d.SetFrameContextCommandAllocator( u, nullptr ); }
    }
 
-   if(d3d.GetCommandQueue()) { d3d.GetCommandQueue()->Release(); d3d.SetCommandQueue(nullptr); }
-   if(d3d.GetCommandList()) { d3d.GetCommandList()->Release(); d3d.SetCommandList(nullptr); }
-   if(d3d.GetRtvDescriptorHeap()) { d3d.GetRtvDescriptorHeap()->Release(); d3d.SetRtvDescriptorHeap(nullptr); }
-   if(d3d.GetSrvDescriptorHeap()) { d3d.GetSrvDescriptorHeap()->Release(); d3d.SetSrvDescriptorHeap(nullptr); }
-   if(d3d.GetFence()) { d3d.GetFence()->Release(); d3d.SetFence(nullptr); }
-   if(g_fenceEvent) { CloseHandle(g_fenceEvent); g_fenceEvent = nullptr; }
+   if(d3d.GetCommandQueue() != nullptr) { d3d.GetCommandQueue()->Release(); d3d.SetCommandQueue(nullptr); }
+   if(d3d.GetCommandList() != nullptr) { d3d.GetCommandList()->Release(); d3d.SetCommandList(nullptr); }
+   if(d3d.GetRtvDescriptorHeap() != nullptr) { d3d.GetRtvDescriptorHeap()->Release(); d3d.SetRtvDescriptorHeap(nullptr); }
+   if(d3d.GetSrvDescriptorHeap() != nullptr) { d3d.GetSrvDescriptorHeap()->Release(); d3d.SetSrvDescriptorHeap(nullptr); }
+   if(d3d.GetFence() != nullptr) { d3d.GetFence()->Release(); d3d.SetFence(nullptr); }
+   if(d3d.GetFenceEvent() != nullptr) { CloseHandle(d3d.GetFenceEvent()); d3d.SetFenceEvent(nullptr); }
    if(d3d.GetDevice() != nullptr) { d3d.GetDevice()->Release(); d3d.SetDevice(nullptr); }
 
 #ifdef DX12_ENABLE_DEBUG_LAYER
@@ -142,24 +146,28 @@ void CFrameD3D::CreateRenderTarget( unsigned uBufferCount, D3D& d3d )
    {
       ID3D12Resource* pBackBuffer = nullptr;
       d3d.GetSwapChain()->GetBuffer(u, IID_PPV_ARGS(&pBackBuffer));
-      d3d.GetDevice()->CreateRenderTargetView(pBackBuffer, nullptr, g_mainRenderTargetDescriptor[u]);
-      d3d.GetResource()[u] = pBackBuffer;
+      d3d.GetDevice()->CreateRenderTargetView(pBackBuffer, nullptr, d3d.GetDescriptorHandle( u ));
+      d3d.SetResource( u,  pBackBuffer );
    }
 }
 
 void CFrameD3D::CleanupRenderTarget( unsigned uBufferCount, D3D& d3d )
 {
-   CFrameD3D::WaitForLastSubmittedFrame( D3D& d3d );
+   CFrameD3D::WaitForLastSubmittedFrame( d3d );
 
    for(unsigned u = 0; u < uBufferCount; u++)
    {
-      if(d3d.GetResource()[u]) { d3d.GetResource()[u]->Release(); d3d.GetResource()[u] = nullptr; }
+      if(d3d.GetResource(u)) { d3d.GetResource(u)->Release(); d3d.SetResource( u, nullptr ); }
    }
 }
 
 void CFrameD3D::WaitForLastSubmittedFrame( D3D& d3d )
 {
-   FrameContext* pframecontext = &d3d.GetFrameContext[d3d.GetFrameIndex() % NUM_FRAMES_IN_FLIGHT];
+   FrameContext* pframecontext = d3d.GetFrameContextPointer( d3d.GetFrameIndex() % D3D::NUM_FRAMES_IN_FLIGHT );
+
+   //FrameContext* frameCtx = &g_frameContext[g_frameIndex % NUM_FRAMES_IN_FLIGHT];
+
+   //FrameContext* pframecontext = &d3d.GetFrameContext[d3d.GetFrameIndex() % D3D::NUM_FRAMES_IN_FLIGHT];
 
    uint64_t uFenceValue = pframecontext->FenceValue;
    if(uFenceValue == 0) return; // No fence was signaled
@@ -167,8 +175,34 @@ void CFrameD3D::WaitForLastSubmittedFrame( D3D& d3d )
    pframecontext->FenceValue = 0;
    if(d3d.GetFence()->GetCompletedValue() >= uFenceValue)  return;
 
-   d3d.GetFence()->SetEventOnCompletion(uFenceValue, g_fenceEvent);
-   WaitForSingleObject(g_fenceEvent, INFINITE);
+   d3d.GetFence()->SetEventOnCompletion(uFenceValue, d3d.GetFenceEvent());
+   WaitForSingleObject(d3d.GetFenceEvent(), INFINITE);
+}
+
+CFrameD3D::FrameContext* CFrameD3D::WaitForNextFrameResources( D3D& d3d )
+{
+   unsigned uNextFrame = d3d.GetFrameIndex() + 1;
+   d3d.SetFrameIndex( uNextFrame );
+
+   HANDLE phWaitableObjects[] = { d3d.GetSwapChainWaitableObject(), nullptr};
+   uint32_t uWaitableObjects = 1;
+
+
+
+   FrameContext* pframecontext = d3d.GetFrameContextPointer( uNextFrame % D3D::NUM_FRAMES_IN_FLIGHT );
+   //FrameContext* frameCtx = &g_frameContext[nextFrameIndex % NUM_FRAMES_IN_FLIGHT];
+   uint64_t uFenceValue = pframecontext->FenceValue;
+   if(uFenceValue != 0) // means no fence was signaled
+   {
+      pframecontext->FenceValue = 0;
+      d3d.GetFence()->SetEventOnCompletion(uFenceValue, d3d.GetFenceEvent());
+      phWaitableObjects[1] = d3d.GetFenceEvent();
+      uWaitableObjects = 2;
+   }
+
+   WaitForMultipleObjects(uWaitableObjects, phWaitableObjects, TRUE, INFINITE);
+
+   return pframecontext;
 }
 
 
