@@ -2,7 +2,9 @@
 #include "string.h"
 #include "address.h"
 #include "number.h"
+#include "circle.h"
 #include "catch2/catch_amalgamated.hpp"
+
 
 
 
@@ -19,6 +21,12 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
    number1.pushback(2);
 
    number1.vector_size();
+
+   circle circle1(5);
+
+   circle1.area();
+   circle1.volume();
+
 
    std::cout << string1.c_str() << std::endl;
    address1.address_details();
