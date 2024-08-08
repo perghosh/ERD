@@ -56,6 +56,7 @@ if( USE_TEST_ )
    add_executable(${TEST_NAME_} "main.cpp" ${external_gd_core} ${external_catch2} 
       "string.cpp"
       "address.cpp"
+      "number.cpp"
       "${TEST_NAME_}.cpp"
    )
    target_include_directories(${TEST_NAME_} PRIVATE ${CMAKE_SOURCE_DIR}/external)

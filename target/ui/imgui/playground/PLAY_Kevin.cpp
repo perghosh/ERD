@@ -1,6 +1,7 @@
 #include "main.h"
 #include "string.h"
 #include "address.h"
+#include "number.h"
 #include "catch2/catch_amalgamated.hpp"
 
 
@@ -12,6 +13,12 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
    string string2("hello");
 
    address address1("Kevin", "Gustafsson", "Ulveskogsgatan", "Kungälv");
+
+   number number1(5);
+
+   number1.pushback(2);
+
+   number1.vector_size();
 
    std::cout << string1.c_str() << std::endl;
    address1.address_details();
