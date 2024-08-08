@@ -1,3 +1,5 @@
+#pragma once
+
 #include <utility>
 /**
  * \brief
@@ -11,9 +13,11 @@ class string
 {
    // ## construction -------------------------------------------------------------
 public:
-   string() : m_pbszBuffer(nullptr), m_iLength(0) {}
+   string() : m_pbszBuffer(nullptr), m_uLength(0) {}
 
    string(const char* pbszText);
+
+   string(const char* pbszText, unsigned int uLength);
    // copy
    string(const string& o) { common_construct(o); }
    string(string&& o) noexcept { common_construct(std::move(o)); }
@@ -67,7 +71,7 @@ public:
 public:
   
    char* m_pbszBuffer;
-   int m_iLength;
+   unsigned int m_uLength;
 
 // ## free functions ------------------------------------------------------------
 public:
