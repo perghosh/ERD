@@ -58,6 +58,7 @@ if( USE_TEST_ )
       "address.cpp"
       "number.cpp"
       "circle.cpp"
+      "rectangle.cpp"
       "${TEST_NAME_}.cpp"
    )
    target_include_directories(${TEST_NAME_} PRIVATE ${CMAKE_SOURCE_DIR}/external)

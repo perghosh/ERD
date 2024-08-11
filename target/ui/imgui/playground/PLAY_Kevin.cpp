@@ -3,6 +3,7 @@
 #include "address.h"
 #include "number.h"
 #include "circle.h"
+#include "rectangle.h"
 #include "catch2/catch_amalgamated.hpp"
 
 
@@ -18,6 +19,13 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
 
    number number1(5);
 
+   rectangle rectangle1(5, 5, 5, "red");
+
+   rectangle1.area();
+   rectangle1.volume();
+
+   std::cout << rectangle1.is_square() << std::endl;
+   //rectangle1.is_square();
    number1.pushback(2);
 
    number1.vector_size();
