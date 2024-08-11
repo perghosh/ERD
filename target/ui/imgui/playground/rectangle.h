@@ -21,6 +21,8 @@ public:
 
    rectangle(int iWidth, int iHeight, int iDepth, std::string stringColor);
 
+   rectangle( const circle& circle_ );
+
    // copy
    rectangle(const rectangle& o) { common_construct(o); }
    rectangle(rectangle&& o) noexcept { common_construct(std::move(o)); }
