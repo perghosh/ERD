@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <string>
 
@@ -56,7 +57,17 @@ public:
       std::cout << iArea << std::endl;
    }
 
+   int get_diameter() const
+   {
+      int iReturnValue = m_iRadius * 2;
+      return(iReturnValue);
+   }
 
+   int get_depth() const
+   {
+      int iReturnValue = m_iDepth;
+      return(iReturnValue);
+   }
 
 public:
    /** \name GET/SET

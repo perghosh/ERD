@@ -21,16 +21,22 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
 
    rectangle rectangle1(5, 5, 5, "red");
 
+   rectangle rectangle2(5, 5, 5);
+
    rectangle1.area();
    rectangle1.volume();
 
    std::cout << rectangle1.is_square() << std::endl;
+
    //rectangle1.is_square();
    number1.pushback(2);
 
    number1.vector_size();
 
-   circle circle1(5);
+   circle circle1(5, 5);
+
+   std::cout << circle1.get_depth() << std::endl;
+   std::cout << circle1.get_diameter() << std::endl;
 
    circle1.area();
    circle1.volume();

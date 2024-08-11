@@ -1,5 +1,6 @@
 #include <string>
 #include "rectangle.h"
+#include "circle.h"
 
 rectangle::rectangle(int iWidth, int iHeight, int iDepth, std::string stringColor)
 {
