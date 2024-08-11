@@ -45,18 +45,7 @@ public:
 
    //@}
 
-   bool is_square()
-   {
-
-      if (m_iWidth && m_iHeight == m_iDepth)
-      {
-         return true;
-      }
-      else
-      {
-         return false;
-      }
-   }
+   bool is_square() const { return(m_iHeight == m_iWidth); }
 
    void area()
    {
