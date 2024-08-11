@@ -59,6 +59,7 @@ if( USE_TEST_ )
       "number.cpp"
       "circle.cpp"
       "rectangle.cpp"
+      "triangle.cpp"
       "${TEST_NAME_}.cpp"
    )
    target_include_directories(${TEST_NAME_} PRIVATE ${CMAKE_SOURCE_DIR}/external)

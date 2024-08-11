@@ -28,4 +28,4 @@ rectangle::rectangle( const circle& circle_ )
    m_iWidth = circle_.get_diameter(); 
    m_iHeight = circle_.get_diameter(); 
    m_iDepth = circle_.get_depth();
-}
+ }

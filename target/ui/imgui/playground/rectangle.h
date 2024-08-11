@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <iostream>
 
@@ -59,6 +61,16 @@ public:
    void volume()
    {
       std::cout << m_iHeight * m_iWidth * m_iDepth << std::endl;
+   }
+
+   int get_height() const
+   {
+      return(m_iHeight);
+   }
+
+   int get_width() const
+   {
+      return(m_iWidth);
    }
 
    /** \name OPERATION
