@@ -5,6 +5,7 @@
 #include "circle.h"
 #include "rectangle.h"
 #include "triangle.h"
+#include "halfcircle.h"
 #include "catch2/catch_amalgamated.hpp"
 
 
@@ -25,10 +26,11 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
 
    triangle triangle1(rectangle1);
 
-
+   halfcircle halfcircle1(3);
 
    rectangle rectangle2(5, 5, 5);
 
+   halfcircle1.area();
 
    rectangle1.area();
    rectangle1.volume();
