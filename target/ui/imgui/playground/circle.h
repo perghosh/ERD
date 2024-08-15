@@ -63,6 +63,12 @@ public:
       return(iReturnValue);
    }
 
+   int get_radius() const
+   {
+      int iReturnValue = m_iRadius;
+      return(iReturnValue);
+   }
+
    int get_depth() const
    {
       int iReturnValue = m_iDepth;

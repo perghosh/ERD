@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include "circle.h"
+#include "rectangle.h"
 
 /**
 * \brief
@@ -16,6 +18,10 @@ public:
    halfcircle() {}
 
    halfcircle(int iRadius);
+
+   halfcircle(const circle& circle_);
+
+   halfcircle(const rectangle& rectangle_);
 
    // copy
    halfcircle(const halfcircle& o) { common_construct(o); }
