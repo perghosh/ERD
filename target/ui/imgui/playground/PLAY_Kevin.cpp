@@ -81,4 +81,12 @@ TEST_CASE("hello", "[Kevin]") {
    //std::cout << stringPer.c_str() << std::endl;
 }
 
+TEST_CASE("Copy", "[Kevin]") {
+   halfcircle halfcircle1(3);
+   halfcircle halfcircle2(halfcircle1);
+   halfcircle halfcircle3 = halfcircle2;
+   halfcircle3 = halfcircle1;
+   std::cout << sizeof(halfcircle3);
+}
+
 

@@ -19,9 +19,15 @@ public:
    triangle(int iHeight, int iWidth);
    triangle( const rectangle& rectangle_);
 
+   triangle(const triangle& o)
+   {
+      m_iHeight = o.m_iHeight;
+      m_iWidth = o.m_iWidth;
+   }
+
    // copy
-   triangle(const triangle& o) { common_construct(o); }
-   triangle(triangle&& o) noexcept { common_construct(std::move(o)); }
+   //triangle(const triangle& o) { common_construct(o); }
+   //triangle(triangle&& o) noexcept { common_construct(std::move(o)); }
    // assign
    triangle& operator=(const triangle& o) { common_construct(o); return *this; }
    triangle& operator=(triangle&& o) noexcept { common_construct(std::move(o)); return *this; }

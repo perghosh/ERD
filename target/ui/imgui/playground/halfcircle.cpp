@@ -4,6 +4,7 @@
 halfcircle::halfcircle(int iRadius)
 {
    m_iRadius = iRadius;
+   m_iDepth = 0;
 }
 
 halfcircle::halfcircle(const circle& circle_)

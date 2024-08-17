@@ -27,9 +27,17 @@ public:
 
    rectangle( const circle& circle_ );
 
+   rectangle(const rectangle& o)
+   {
+      m_iWidth = o.m_iWidth;
+      m_iHeight = o.m_iHeight;
+      m_iDepth = o.m_iDepth;
+      m_stringColor = o.m_stringColor;
+   }
+
    // copy
-   rectangle(const rectangle& o) { common_construct(o); }
-   rectangle(rectangle&& o) noexcept { common_construct(std::move(o)); }
+   //rectangle(const rectangle& o) { common_construct(o); }
+   //rectangle(rectangle&& o) noexcept { common_construct(std::move(o)); }
    // assign
    rectangle& operator=(const rectangle& o) { common_construct(o); return *this; }
    rectangle& operator=(rectangle&& o) noexcept { common_construct(std::move(o)); return *this; }

@@ -23,12 +23,25 @@ public:
 
    halfcircle(const rectangle& rectangle_);
 
+   halfcircle(const halfcircle& o)
+   {
+      m_iDepth = o.m_iDepth;
+      m_iRadius = o.m_iRadius;
+   }
+
+   halfcircle& operator=(const halfcircle& o)
+   {
+      m_iDepth = o.m_iDepth;
+      m_iRadius = o.m_iRadius;
+      return *this;
+   }
+
    // copy
-   halfcircle(const halfcircle& o) { common_construct(o); }
-   halfcircle(halfcircle&& o) noexcept { common_construct(std::move(o)); }
+   //halfcircle(const halfcircle& o) { common_construct(o); }
+   //halfcircle(halfcircle&& o) noexcept { common_construct(std::move(o)); }
    // assign
-   halfcircle& operator=(const halfcircle& o) { common_construct(o); return *this; }
-   halfcircle& operator=(halfcircle&& o) noexcept { common_construct(std::move(o)); return *this; }
+   //halfcircle& operator=(const halfcircle& o) { common_construct(o); return *this; }
+   //halfcircle& operator=(halfcircle&& o) noexcept { common_construct(std::move(o)); return *this; }
 
    ~halfcircle() {}
 private:

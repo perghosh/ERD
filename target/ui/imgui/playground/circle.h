@@ -24,9 +24,16 @@ public:
 
    circle(std::string stringColor);
 
+   circle(const circle& o)
+   {
+      m_iRadius = o.m_iRadius;
+      m_iDepth = o.m_iDepth;
+      m_stringColor = o.m_stringColor;
+   }
+
    // copy
-   circle(const circle& o) { common_construct(o); }
-   circle(circle&& o) noexcept { common_construct(std::move(o)); }
+   //circle(const circle& o) { common_construct(o); }
+   //circle(circle&& o) noexcept { common_construct(std::move(o)); }
    // assign
    circle& operator=(const circle& o) { common_construct(o); return *this; }
    circle& operator=(circle&& o) noexcept { common_construct(std::move(o)); return *this; }
