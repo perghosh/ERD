@@ -4,6 +4,8 @@
 #include "number.h"
 #include "circle.h"
 #include "rectangle.h"
+#include "triangle.h"
+#include "halfcircle.h"
 #include "catch2/catch_amalgamated.hpp"
 
 
@@ -21,16 +23,34 @@ TEST_CASE("[Kevin] first", "[Kevin]") {
 
    rectangle rectangle1(5, 5, 5, "red");
 
+
+   triangle triangle1(rectangle1);
+
+   halfcircle halfcircle1(3);
+
+   rectangle rectangle2(5, 5, 5);
+
+   halfcircle1.area();
+
    rectangle1.area();
    rectangle1.volume();
 
    std::cout << rectangle1.is_square() << std::endl;
+
+  
    //rectangle1.is_square();
    number1.pushback(2);
 
    number1.vector_size();
 
-   circle circle1(5);
+   circle circle1(5, 5);
+
+   rectangle rectangle3(circle1);
+
+
+
+   std::cout << circle1.get_depth() << std::endl;
+   std::cout << circle1.get_diameter() << std::endl;
 
    circle1.area();
    circle1.volume();
@@ -59,6 +79,14 @@ TEST_CASE("hello", "[Kevin]") {
    //stringPer = "nu var det slut";
 
    //std::cout << stringPer.c_str() << std::endl;
+}
+
+TEST_CASE("Copy", "[Kevin]") {
+   halfcircle halfcircle1(3);
+   halfcircle halfcircle2(halfcircle1);
+   halfcircle halfcircle3 = halfcircle2;
+   halfcircle3 = halfcircle1;
+   std::cout << sizeof(halfcircle3);
 }
 
 
