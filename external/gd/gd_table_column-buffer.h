@@ -334,6 +334,7 @@ public:
    table_column_buffer( const table_column_buffer& o, tag_columns ): m_puData(nullptr) { common_construct( o, tag_columns{}); }
    table_column_buffer( table_column_buffer&& o ) noexcept : m_puData(nullptr) { common_construct( std::move( o ) ); }
    table_column_buffer( const table_column_buffer& o, uint64_t uFrom, uint64_t uCount );
+   table_column_buffer( const table_column_buffer& o, const std::vector<uint64_t> vectorRow );
    table_column_buffer( const table_column_buffer& o, const range& rangeCopy );
 // assign
    table_column_buffer& operator=( const table_column_buffer& o ) { clear(); common_construct( o ); return *this; }
@@ -450,9 +451,23 @@ public:
    table_column_buffer& column_add( const std::vector< std::pair< unsigned, unsigned > >& vectorType, tag_type_constant );
    table_column_buffer& column_add( const std::string_view& stringNameStart, const std::vector< std::tuple< std::string_view, unsigned, std::string_view > >& vectorType, tag_type_name );
    table_column_buffer& column_add( const table_column_buffer* p_ );
+   
+   table_column_buffer& column_add( const std::vector< std::tuple< std::string, unsigned, std::string > >& vectorType, tag_type_name );
 
    std::pair<bool, std::string> column_add( const std::string_view& stringColumns, tag_parse );
    table_column_buffer& column_add( const argument::column& columnAdd ) { return column_add( columnAdd.type(), columnAdd.size(), columnAdd.name(), columnAdd.alias() ); }
+
+   template< typename CLASS >
+   table_column_buffer& column_add() { return column_add( CLASS::to_columns(), tag_type_name{} ); }
+   template< typename CLASS >
+   table_column_buffer& column_add( const std::string_view& stringName ) { return column_add( CLASS::to_columns( stringName ), tag_type_name{} ); }
+
+   // ## Change the table structure after prepare, these methods do a lot of work
+
+   table_column_buffer& column_add( const column& columnToAdd, tag_prepare );
+   table_column_buffer& column_add(unsigned uColumnType, unsigned uSize, const std::string_view& stringName, const std::string_view& stringAlias, tag_prepare);
+   table_column_buffer& column_add( const std::vector< std::tuple< std::string_view, unsigned, std::string_view > >& vectorType, tag_type_name, tag_prepare );
+
    ///@}
 
    // ### access column or find index for column/columns
@@ -492,8 +507,8 @@ public:
    /// @name column_fill
    /// fill specified column with value
    ///@{
-   void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue ) { column_fill(  uColumn, variantviewValue, 0, m_uRowCount ); }
-   void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue, tag_convert ) { column_fill(  uColumn, variantviewValue, 0, m_uRowCount, tag_convert{}); }
+   void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue ) { column_fill(  uColumn, variantviewValue, 0, get_row_count() ); }
+   void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue, tag_convert ) { column_fill(  uColumn, variantviewValue, 0, get_row_count(), tag_convert{}); }
    void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue, uint64_t uBeginRow, uint64_t uEndRow );
    void column_fill( unsigned uColumn, const gd::variant_view& variantviewValue, uint64_t uBeginRow, uint64_t uEndRow, tag_convert );
    void column_fill( unsigned uColumn, const gd::variant_view* pvariantviewValue, size_t uCount, uint64_t uBeginRow );
@@ -570,6 +585,7 @@ public:
    void row_add( const std::vector<gd::variant_view>& vectorValue, const std::vector<unsigned>& vectorColumn );
    void row_add( const std::vector<gd::variant_view>& vectorValue, const std::vector<unsigned>& vectorColumn, tag_convert );
    void row_add( const std::vector<gd::variant_view>& vectorValue, tag_convert );
+   void row_add( unsigned uFirstColumn, const std::vector<gd::variant_view>& vectorValue, tag_convert );
    void row_add( const std::vector< std::pair<unsigned, gd::variant_view> >& vectorValue );
    void row_add( const std::vector< std::pair<unsigned, gd::variant_view> >& vectorValue, tag_convert );
    void row_add( const std::vector< std::pair<std::string_view, gd::variant_view> >& vectorValue );
@@ -577,17 +593,27 @@ public:
    void row_add( const gd::argument::arguments& argumentsRow, tag_arguments );
    void row_add( uint64_t uRowToCopy, tag_copy );
    void row_add( const std::string_view& stringRowValue, char chSplit, tag_parse );
+
+   template< typename OBJECT >
+   void row_add( unsigned uFirstColumn, const OBJECT& object_ ) {
+      std::vector< gd::variant_view > vectorObject;
+      object_.to_values( vectorObject );
+      row_add( uFirstColumn, vectorObject, tag_convert{});
+   }
+
+
    ///@}
 
-   /// @name row_set
-   /// set values in row
-   ///@{
+/// @name row_set
+/// set values in row
+///@{
    void row_set( uint64_t uRow, const std::initializer_list<gd::variant_view>& listValue );
    void row_set( uint64_t uRow, unsigned uSart, const std::initializer_list<gd::variant_view>& listValue );
    void row_set( uint64_t uRow, const std::initializer_list<gd::variant_view>& listValue, tag_convert );
    void row_set( uint64_t uRow, unsigned uSart, const std::initializer_list<gd::variant_view>& listValue, tag_convert );
    void row_set( uint64_t uRow, const std::vector<gd::variant_view>& listValue );
    void row_set( uint64_t uRow, const std::vector<gd::variant_view>& listValue, tag_convert );
+   void row_set( uint64_t uRow, unsigned uSart, const std::vector<gd::variant_view>& listValue, tag_convert );
    void row_set( uint64_t uRow, const std::vector<gd::variant_view>& listValue, const std::vector<unsigned>& vectorColumn );
    void row_set( uint64_t uRow, const std::vector<gd::variant_view>& listValue, const std::vector<unsigned>& vectorColumn, tag_convert );
    void row_set( uint64_t uRow, const std::vector< std::pair<unsigned, gd::variant_view> >& vectorValue );
@@ -601,15 +627,28 @@ public:
    void row_set_null( uint64_t uFrom, uint64_t uCount );
    void row_set_range( uint64_t uRow, const gd::variant_view variantviewSet, tag_convert ) { row_set_range( uRow, 0, get_column_count(), variantviewSet, tag_convert{}); }
    void row_set_range( uint64_t uRow, unsigned uStartColumn, unsigned uCount, const gd::variant_view variantviewSet, tag_convert );
-   ///@}
 
-   /// @name row_delete
-   /// deletes row/rows in table
+   // ### support for external objects
+   template< typename OBJECT >
+   void row_set( uint64_t uRow, unsigned uFirstColumn, const OBJECT& object_ );
+   template< typename OBJECT >
+   void row_set( uint64_t uRow, const std::string_view& stringFind, const OBJECT& object_ );
+
+///@}
+
+   /// @name row_clear
+   /// clears all rows in table
    ///@{
-   /// Deletes all rows in table (just set the row count to 0)
-   void row_delete() { m_uRowCount = 0; }
+   /// Clears all rows in table (just set the row count to 0)
+   void row_clear() { m_uRowCount = 0; }
    ///@}
 
+    /// @name row_delete
+   /// deletes last row in table
+   ///@{
+   /// Deletes last row in table (by decreasing the row count)
+   void row_delete() { if (m_uRowCount > 0) m_uRowCount--; }
+   ///@}
 
    /// @name row_reserve_add
    /// reserve memory to store more rows in table
@@ -622,11 +661,15 @@ public:
    // row_const_value_type row_get( uint64_t uRow, tag_cell ) const;
 
    std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow ) const;
+   std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow, unsigned uFirstColumn, unsigned uCount ) const;
+   std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow, unsigned uFirstColumn ) const { return row_get_variant_view( uRow, uFirstColumn, get_column_count() - uFirstColumn ); }
    std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow, const unsigned* puIndex, unsigned uSize ) const;
    std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow, const std::vector<unsigned>& vectorIndex ) const { return row_get_variant_view( uRow, vectorIndex.data(), (unsigned)vectorIndex.size() ); }
    void row_get_variant_view( uint64_t uRow, std::vector<gd::variant_view>& vectorValue ) const;
    void row_get_variant_view( uint64_t uRow, const unsigned* puIndex, unsigned uSize, std::vector<gd::variant_view>& vectorValue ) const;
    void row_get_variant_view( uint64_t uRow, const std::vector<unsigned>& vectorIndex, std::vector<gd::variant_view>& vectorValue ) const { row_get_variant_view( uRow, vectorIndex.data(), (unsigned)vectorIndex.size(), vectorValue ); }
+
+   std::vector<gd::variant_view> row_get_variant_view( uint64_t uRow, unsigned uFirstColumn, unsigned uCount );
 
    int64_t row_get_variant_view( unsigned uColumn, const gd::variant_view& variantviewFind, std::vector<gd::variant_view>& vectorValue ) const;
 
@@ -1207,6 +1250,40 @@ inline void table_column_buffer::row_set_null( uint64_t uRow ) { assert( uRow < 
 inline void table_column_buffer::row_set_null( uint64_t uFrom, uint64_t uCount ) { assert( (uFrom + uCount) <= get_row_count() );
    for( auto u = uFrom, uMax = (uFrom + uCount); u < uMax; u++ ) row_set_null( u );
 }
+
+/** ---------------------------------------------------------------------------
+ * @brief set row values from external c++ object
+ * @param uRow index for row where values are placed
+ * @param uFirstColumn first column where first value in external object is placed, rest is placed in following columns
+ * @param object_ object with values that are placed on row
+ */
+template< typename OBJECT >
+void table_column_buffer::row_set( uint64_t uRow, unsigned uFirstColumn, const OBJECT& object_ ) {
+   std::vector< gd::variant_view > vectorObject;
+   object_.to_values( vectorObject );
+   row_set( uRow, uFirstColumn, vectorObject, tag_convert{});
+}
+
+
+/** ---------------------------------------------------------------------------
+ * @brief set row values from external c++ object
+ * For this to work the external c++ object needs to implement a member method
+ * named to `to_values` and a static member method called `to_member_name`
+ * @param uRow index for row where values are placed
+ * @param stringPrefixFind if named column where to start to set values from object is prefixed.
+          prefix names enables the posibility to store multiple objects with same
+          object type on same row.
+ * @param object_ object with values that are placed on row
+ */
+template< typename OBJECT >
+void table_column_buffer::row_set( uint64_t uRow, const std::string_view& stringPrefixFind, const OBJECT& object_ ) {
+   std::vector< gd::variant_view > vectorObject;
+   object_.to_values( vectorObject );
+   std::string stringName = OBJECT::to_member_name( 0, stringPrefixFind );
+   unsigned uFirstColumn = column_get_index( stringName ); 
+   row_set( uRow, uFirstColumn, vectorObject, tag_convert{});
+}
+
 
 /** ---------------------------------------------------------------------------
  * @brief If you know the type value in column and it is not null then this is very fast to return exact value

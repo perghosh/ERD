@@ -10,7 +10,7 @@
  * - `skip_*` skip part in string
  * - `get_line*` read line from text
  * - `read_line*` read text to harvest words in some form from the text
- * - strchr find character in text
+ * - `strchr` find character in text
  * - `strstr` find text part in text
  
 
@@ -228,6 +228,9 @@ struct tag_csv {};
 struct tag_sql {};
 /// tag dispatcher for json specific data
 struct tag_json {};
+/// tag dispatcher for uri formated data
+struct tag_uri {};
+
 
 /// tag dispatcher for methods including zero ending in string
 struct tag_zero_end {};
@@ -382,6 +385,39 @@ struct sql
    ~sql() {}
 
    sql& operator=( const sql& o ) { m_uOptions = o.m_uOptions; *(uint16_t*)m_puQuote = *(uint16_t*)o.m_puQuote; return *this; }
+
+   bool is_quote( uint8_t uQuote ) const { return m_puQuote[0] == uQuote || m_puQuote[1] == uQuote; }
+
+   // ## attributes
+   unsigned m_uOptions = 0;      ///< flag options like if values should be trimmed
+   uint8_t m_puQuote[2];         ///< Quote character
+};
+
+// ----------------------------------------------------------------------------
+// ------------------------------------------------------------------------ sql
+// ----------------------------------------------------------------------------
+
+
+/**
+ * \brief json rules on how to parse json formated text
+ *
+ *
+ */
+struct json_rule
+{
+   enum enumDelimiter
+   {
+      eDelimiterMany = 1 << 8,
+      eDelimiterMAX = 1 << 9,
+   };
+
+   // ## construction -------------------------------------------------------------
+
+   json_rule() { m_puQuote[0] = ('\''); m_puQuote[1] = '\"'; }
+   json_rule( const json_rule& o ) { m_uOptions = o.m_uOptions; *(uint16_t*)m_puQuote = *(uint16_t*)o.m_puQuote; }
+   ~json_rule() {}
+
+   json_rule& operator=( const json_rule& o ) { m_uOptions = o.m_uOptions; *(uint16_t*)m_puQuote = *(uint16_t*)o.m_puQuote; return *this; }
 
    bool is_quote( uint8_t uQuote ) const { return m_puQuote[0] == uQuote || m_puQuote[1] == uQuote; }
 
@@ -593,7 +629,9 @@ const char* skip_string_g( const char* pbsz, const char* pbszEnd, tag_json );
 
 const char* skip_quoted_g( const char* pbsz );
 const char* skip_quoted_g( const char* pbsz, const char* pbszEnd );
-const char* skip_quoted_g( const char* pbsz, const char* pbszEnd );
+
+const char* skip_escaped_g( const char* pbsz );
+const char* skip_escaped_g( const char* pbsz, const char* pbszEnd );
 
 const char* skip_wildcard_g( const char* pbsz, const char* pbszEnd, const char* pbszWildcard, unsigned uLength );
 inline const char* skip_wildcard_g( const char* pbsz, const char* pbszEnd, const std::string_view& stringMatch ) { return skip_wildcard_g( pbsz, pbszEnd, stringMatch.data(), stringMatch.length() ); }
@@ -672,7 +710,7 @@ inline const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFi
 
 // ## SQL
 
-// ## Find character within sql formated string (without comments)
+// ### Find character within sql formated string (without comments)
 
 const char* strchr( const char* pbszText, char chFind, const sql& sql, const uint8_t* puCharacterClass );
 inline const char* strchr( const char* pbszText, char chFind, tag_sql ) { return strchr( pbszText, chFind, sql(), nullptr ); }
@@ -684,10 +722,15 @@ inline const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFi
 inline const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFind, const sql& sql ) { return strchr( pbszBegin, pbszEnd, chFind, sql, nullptr ); }
 inline const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFind, const uint8_t* puCharacterClass, tag_sql ) { return strchr( pbszBegin, pbszEnd, chFind, sql(), puCharacterClass ); }
 
-const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const uint8_t* puCharacterClass );
-const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const csv& csv, const uint8_t* puCharacterClass );
-const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const sql& sql, const uint8_t* puCharacterClass );
-const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const sql& sql, const uint8_t* puCharacterClass, tag_wildcard );
+// ## JSON
+
+// ### Find character within json formated string (without comments)
+const char* strchr( const char* pbszText, char chFind, const json_rule& json_rule, const uint8_t* puCharacterClass );
+inline const char* strchr( const char* pbszText, char chFind, const json_rule& json_rule ) { return strchr( pbszText, chFind, json_rule, nullptr ); }
+
+const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFind, const json_rule& json_rule, const uint8_t* puCharacterClass );
+inline const char* strchr( const std::string_view& stringJson, char chFind, const json_rule& json_rule, const uint8_t* puCharacterClass ) { return strchr( stringJson.data(), stringJson.data() + stringJson.length(), chFind, json_rule, puCharacterClass ); }
+inline const char* strchr( const std::string_view& stringJson, char chFind, const json_rule& json_rule ) { return strchr( stringJson.data(), stringJson.data() + stringJson.length(), chFind, json_rule, nullptr ); }
 
 // ## Iterator for string to replace or process multiple positions for selected character
 
@@ -716,6 +759,24 @@ inline std::pair<bool, const char*> read_line_g( const std::string_view& stringQ
    return read_line_g( stringQueryString.data(), stringQueryString.data() + stringQueryString.length(), vectorValue, querystring, format_ ); 
 }
 
+// ## strstr methods, similar to c `strstr` but ignores string parts in text
+
+const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const uint8_t* puCharacterClass );
+const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const csv& csv, const uint8_t* puCharacterClass );
+const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const sql& sql, const uint8_t* puCharacterClass );
+const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const sql& sql, const uint8_t* puCharacterClass, tag_wildcard );
+
+const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const json_rule& json_rule, const uint8_t* puCharacterClass );
+inline const char* strstr(const char* pbszBegin, const char* pbszEnd, const std::string_view& stringFind, const json_rule& json_rule, const uint8_t* puCharacterClass) { return strstr( pbszBegin, pbszEnd, stringFind.data(), stringFind.size(), json_rule, puCharacterClass ); }
+inline const char* strstr(const std::string_view& stringText, const std::string_view& stringFind, const json_rule& json_rule, const uint8_t* puCharacterClass) { return strstr( stringText.data(), stringText.data() + stringText.size(), stringFind.data(), stringFind.size(), json_rule, puCharacterClass); }
+inline const char* strstr(const char* pbszBegin, const char* pbszEnd, const std::string_view& stringFind, const json_rule& json_rule) { return strstr( pbszBegin, pbszEnd, stringFind.data(), stringFind.size(), json_rule, nullptr ); }
+inline const char* strstr(const std::string_view& stringText, const std::string_view& stringFind, const json_rule& json_rule) { return strstr( stringText.data(), stringText.data() + stringText.size(), stringFind.data(), stringFind.size(), json_rule, nullptr); }
+
+
+// ## strcpy methods, similar to c `strcpy` with extra functionality
+
+const char* strcpy( const char* pbszText, std::string& stringCopy, char chCopyTo );
+const char* strcpy( const char* pbszText, std::string& stringCopy, const std::vector<char>& vectorCopyTo );
 
 // ## split methods
 void split_g( const std::string_view& stringText, const std::string_view& stringSplit, std::vector<std::string>& vectorPart, const csv& csv );

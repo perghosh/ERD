@@ -13,6 +13,10 @@ namespace {
       stringNew += stringValue;
       return true;
    }
+
+   enum enumOption {
+      eOptionScientific    = 0b0000'0000'0000'0000'0000'0000'0000'0001,
+   };
 }
 
 /// format string as uri and return true if string is modified, if not (no characters found that needs to be formated) false is returned
@@ -67,13 +71,16 @@ std::pair<bool, std::string> to_table( const std::string_view& stringTableData, 
 */
 
 /// convert table to csv
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_csv )
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_csv )
 {
+   unsigned uOptions = 0;
    std::function<bool(std::string_view, std::string& stringNew)> functionFormat( format_copy );
    std::string stringResult;                    // result string with table data
    std::vector<gd::variant_view> vectorValue;   // used to fetch values from table
 
    if( format_text_ ) { functionFormat = format_text_; }
+
+   if( argumentsOption["scientific"].is_true() == true ) uOptions |= eOptionScientific;
 
    auto uEnd = uBegin + uCount;
    for( auto uRow = uBegin; uRow < uEnd; uRow++ )
@@ -121,7 +128,8 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const
          }
          else
          {
-            stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            if( uOptions & eOptionScientific) stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            else                              stringResult += value_.as_string();
          }
 
          uColumn++;
@@ -135,7 +143,7 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const
 
 
 /// convert table (both header and body) to json array
-void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_csv)
+void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_csv)
 {
    std::string stringResult;   // result string with table data
 
@@ -174,7 +182,7 @@ void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const 
    if( uCount > 0 && table.get_row_count() > 0 )
    {
       stringResult += "\n";
-      to_string( table, uBegin, uCount, format_text_, stringResult, tag_io_csv{});
+      to_string( table, uBegin, uCount, argumentsOption, format_text_, stringResult, tag_io_csv{});
    }
 
    if( stringOut.empty() == true ) stringOut = std::move( stringResult );
@@ -182,10 +190,13 @@ void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const 
 }
 
 
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, bool (*format_text_)(unsigned uColumn, unsigned uType, const gd::variant_view&, std::string& stringNew), std::string& stringOut, tag_io_csv )
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, bool (*pformat_text_)(unsigned uColumn, unsigned uType, const gd::variant_view&, std::string& stringNew), std::string& stringOut, tag_io_csv )
 {
+   unsigned uOptions = 0;
    std::string stringResult;                    // result string with table data
    std::vector<gd::variant_view> vectorValue;   // used to fetch values from table
+
+   if( argumentsOption["scientific"].is_true() == true ) uOptions |= eOptionScientific;
 
    auto uEnd = uBegin + uCount;
    for( auto uRow = uBegin; uRow < uEnd; uRow++ )
@@ -204,7 +215,8 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, bool 
          const auto& value_ = *it;
 
          unsigned uType = table.column_get_type( uColumn );
-         bool bContinue = format_text_( uColumn, uType, value_, stringResult );
+         bool bContinue = false;
+         if( pformat_text_ != nullptr ) { pformat_text_( uColumn, uType, value_, stringResult ); }
          if( bContinue == true ) { uColumn++; continue; }
 
          if( value_.is_null() == true )
@@ -221,7 +233,8 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, bool 
          }
          else
          {
-            stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            if( uOptions & eOptionScientific) stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            else                              stringResult += value_.as_string();
          }
 
          uColumn++;
@@ -308,13 +321,16 @@ std::pair<bool, const char*> read_g(std::vector<std::string>& vectorHeader, cons
 // std::pair< bool, std::string >
 
 /// convert table to json array
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json )
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json )
 {
+   unsigned uOptions = 0;
    std::function<bool(std::string_view, std::string& stringNew)> functionFormat( format_copy );
    std::string stringResult;                    // result string with table data
    std::vector<gd::variant_view> vectorValue;   // used to fetch values from table
 
    if( format_text_ ) { functionFormat = format_text_; }
+   
+   if( argumentsOption["scientific"].is_true() == true ) uOptions |= eOptionScientific;
 
    auto uEnd = uBegin + uCount;
    for( auto uRow = uBegin; uRow < uEnd; uRow++ )
@@ -351,7 +367,8 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const
          }
          else
          {
-            stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            if( uOptions & eOptionScientific) stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            else                              stringResult += value_.as_string();
          }
 
          uColumn++;
@@ -365,53 +382,139 @@ void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const
    else stringOut += stringResult;
 }
 
-/// convert table (both header and body) to json array
-void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json)
+/// convert table to json array for selected rows
+void to_string( const dto::table& table, const std::vector<uint64_t>& vectorRow, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json )
 {
-   std::string stringResult("[");   // result string with table data
+   unsigned uOptions = 0;
+   std::function<bool(std::string_view, std::string& stringNew)> functionFormat( format_copy );
+   std::string stringResult;                    // result string with table data
+   std::vector<gd::variant_view> vectorValue;   // used to fetch values from table
 
-   auto it = table.column_begin(), itEnd = table.column_end();
+   if( format_text_ ) { functionFormat = format_text_; }
 
-   if(it != itEnd)
+   if( argumentsOption["scientific"].is_true() == true ) uOptions |= eOptionScientific;
+
+   uint64_t uCount = 0;
+   for( auto uRow : vectorRow )
    {
-      stringResult += '\"';
-      if(it->alias() != 0) { stringResult += table.column_get_alias( *it ); }
-      else { stringResult += table.column_get_name( *it ); }
-      stringResult += '\"';
-      it++;
-   }
+      if( uCount > 0 ) stringResult += ",\n";                              // add comma separator between rows
+      stringResult += "[";
 
-   for(; it < itEnd; it++)
+      vectorValue.clear();
+      table.row_get_variant_view( uRow, vectorValue );
+
+      unsigned uColumn = 0;
+      auto it = std::begin( vectorValue );
+      auto itEnd = std::end( vectorValue );
+      for( ; it < itEnd; it++ )
+      {
+         if( uColumn > 0 ) stringResult += ",";                                // add `,` to separate columns
+         auto value_ = *it;                                                    // active column value
+
+         if( value_.is_null() == true )
+         {
+            stringResult += "null";                                            // for javascript null
+         }
+         else if( value_.is_string() == true )
+         {
+            stringResult += "\"";
+#ifdef _DEBUG
+            auto uLength_d = strlen((const char*)value_);                                          assert( uLength_d < 0x0010'0000 );
+            auto uChar_d = ((const char*)value_)[uLength_d];                                       assert( uChar_d == 0 );
+#endif // _DEBUG
+
+            const std::string_view text_ = value_.as_string_view();
+            bool bOk = functionFormat( text_, stringResult );
+            stringResult += "\"";
+         }
+         else
+         {
+            if( uOptions & eOptionScientific) stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            else                              stringResult += value_.as_string();
+         }
+
+         uColumn++;
+      }
+
+      stringResult += ']';
+      uCount++;
+   }
+   if( stringResult.empty() == false ) stringResult += "\n";                   // add new line
+
+   if( stringOut.empty() == true ) stringOut = std::move( stringResult );
+   else stringOut += stringResult;
+}
+
+namespace internal {
+   void header_to_string(const dto::table& table, std::string& stringOut, tag_io_json)
    {
-      stringResult += std::string_view( ",\"" );
-      if(it->alias() != 0)
+      stringOut += '[';   // result string with table data
+
+      auto it = table.column_begin(), itEnd = table.column_end();
+
+      if(it != itEnd)
       {
-         stringResult += table.column_get_alias( *it );
-      }
-      else 
-      {
-         stringResult += table.column_get_name( *it );
+         stringOut += '\"';
+         if(it->alias() != 0) { stringOut += table.column_get_alias( *it ); }
+         else { stringOut += table.column_get_name( *it ); }
+         stringOut += '\"';
+         it++;
       }
 
-      stringResult += '\"';
+      for(; it < itEnd; it++)
+      {
+         stringOut += std::string_view( ",\"" );
+         if(it->alias() != 0)
+         {
+            stringOut += table.column_get_alias( *it );
+         }
+         else 
+         {
+            stringOut += table.column_get_name( *it );
+         }
+
+         stringOut += '\"';
+      }
+
+      stringOut += ']';
    }
+}
 
-   stringResult += ']' ;
+/// convert table (both header and body) to json array
+void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json)
+{
+   std::string stringResult;
+   internal::header_to_string( table, stringResult, tag_io_json{} );
 
    // ## add body if count is set
    if( uCount > 0 && table.get_row_count() > 0 )
    {
       stringResult += ",\n";
-      to_string( table, uBegin, uCount, format_text_, stringResult, tag_io_json{});
+      to_string( table, uBegin, uCount, argumentsOption, format_text_, stringResult, tag_io_json{}); // call method that generates json formated result for table data
    }
 
    if( stringOut.empty() == true ) stringOut = std::move( stringResult );
    else stringOut += stringResult;
 }
 
-/// Convert table data to json arrays where each row is placed in array as an object. key for value is the name for column
-void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json, tag_io_name)
+/// convert table (both header and body) to json array
+void to_string(const dto::table& table, const std::vector<uint64_t>& vectorRow, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json)
 {
+   std::string stringResult;
+   internal::header_to_string( table, stringResult, tag_io_json{} );
+
+   stringResult += ",\n";
+   to_string( table, vectorRow, argumentsOption, format_text_, stringResult, tag_io_json{}); // call method that generates json formated result for table data
+
+   if( stringOut.empty() == true ) stringOut = std::move( stringResult );
+   else stringOut += stringResult;
+}
+
+
+/// Convert table data to json arrays where each row is placed in array as an object. key for value is the name for column
+void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json, tag_io_name)
+{
+   unsigned uOptions = 0;
    std::function<bool(std::string_view, std::string& stringNew)> functionFormat( format_copy );
    std::string stringName;                      // used for names that need to be escaped
    std::string stringResult;                    // result string with table data
@@ -419,6 +522,8 @@ void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const 
    std::vector<gd::variant_view> vectorValue;   // used to fetch values from table
 
    if( format_text_ ) { functionFormat = format_text_; }
+
+   if( argumentsOption["scientific"].is_true() == true ) uOptions |= eOptionScientific;
 
    vectorName = table.column_get_name();
 
@@ -469,7 +574,9 @@ void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const 
          }
          else
          {
-            stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            if( uOptions & eOptionScientific) stringResult += value_.as_string( gd::variant_type::tag_scientific{} );
+            else                              stringResult += value_.as_string();
+
          }
 
          uColumn++;
@@ -1024,6 +1131,42 @@ void write_insert_g(const std::string_view& stringTableName, const dto::table& t
 
    stringInsert += stringValues;
 }
+
+/// overloaded  to take rows to print as sql insert queries from vector
+void write_insert_g( const std::string_view& stringTableName, const dto::table& table, const std::vector<uint64_t>& vectorRow, const std::vector<unsigned>& vectorColumn, std::string& stringInsert, const gd::argument::arguments& argumentsOption, tag_io_sql )
+{
+   std::string stringValues;
+   stringInsert += std::string_view{ "INSERT INTO " };
+   stringInsert += stringTableName;
+   stringInsert.append( std::string_view{ " ( " } );
+
+   decltype( table.column_get_name() ) vectorName;
+   if(argumentsOption.exists("names") == true)
+   {
+      auto stringNames = argumentsOption["names"].as_variant_view().as_string_view();
+      vectorName = gd::utf8::split( stringNames, ',', gd::utf8::tag_string_view{});                assert( vectorName.size() == table.get_column_count() );
+   }
+   else { vectorName = table.column_get_name(); }
+
+   add_column_name_s( stringInsert, vectorName );
+   stringInsert.append( std::string_view{ " )\nVALUES(" } );
+
+   uint64_t uCount = 0;
+   std::vector< gd::variant_view > vectorValue;
+   for( auto uRow : vectorRow )
+   {
+      if( uCount > 0 ) { stringValues.append( std::string_view{ ",\n( " } ); }
+
+      table.row_get_variant_view( uRow, vectorValue );
+      add_column_value_s( stringValues, vectorValue );
+      stringValues.append( std::string_view{ " )" } );
+      vectorValue.clear();
+      uCount++;
+   }
+
+   stringInsert += stringValues;
+}
+
 
 
 void write_insert_g(const std::string_view& stringTableName, const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::vector<unsigned>& vectorColumn, std::string& stringInsert, const gd::argument::arguments& argumentsOption, tag_io_sql)

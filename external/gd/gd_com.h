@@ -68,6 +68,8 @@ namespace com {
 
       operator POINTER*() const { return m_ppointer; }
 
+      POINTER* get() const { return m_ppointer; }
+
       POINTER* m_ppointer;
    };
 

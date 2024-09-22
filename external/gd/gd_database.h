@@ -84,6 +84,7 @@ struct database_i : public unknown_i
    virtual std::pair<bool, std::string> open( const std::string_view& stringDriverConnect ) = 0;
    virtual std::pair<bool, std::string> open( const gd::argument::arguments& argumentsConnect ) = 0;
    virtual std::pair<bool, std::string> execute( const std::string_view& stringStatement ) = 0;
+   virtual std::pair<bool, std::string> ask( const std::string_view& stringStatement, gd::variant* pvariantValue ) = 0;
    virtual std::pair<bool, std::string> get_cursor( cursor_i** ppCursor ) = 0;
    virtual void close() = 0;
    virtual void erase() = 0;

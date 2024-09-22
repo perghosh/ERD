@@ -79,6 +79,23 @@ struct tag_parse {};                                                           /
  *
  \code
  \endcode
+
+*Iterate values in arguments object and print to console*
+ \code
+void print( const gd::argument::arguments& arguments_ )
+{
+   for( auto pPosition = arguments_.next(); pPosition != nullptr; pPosition = arguments_.next(pPosition) )
+   {
+      auto stringName = gd::argument::arguments::get_name_s( pPosition );
+      auto value_ = gd::argument::arguments::get_argument_s( pPosition ).as_variant_view();
+
+      std::cout << "Name: " << stringName << ", Value: " << value_.as_string() << "\n";
+   }
+}
+ \endcode
+
+ \code
+ \endcode
  */
 class arguments
 {
@@ -665,6 +682,7 @@ public:
    arguments& append(param_type uType, const_pointer pBuffer, unsigned int uLength);
 
    arguments& append(const std::string_view& stringName, std::nullptr_t) { return append(stringName, eTypeNumberUnknown, nullptr, 0); }
+   arguments& append(const std::string_view& stringName, bool v) { return append(stringName, eTypeNumberBool, (const_pointer)&v, sizeof(bool)); }
    arguments& append(const std::string_view& stringName, int8_t v) { return append(stringName, eTypeNumberInt8, (const_pointer)&v, sizeof(int8_t)); }
    arguments& append(const std::string_view& stringName, uint8_t v) { return append(stringName, eTypeNumberUInt8, (const_pointer)&v, sizeof(uint8_t)); }
    arguments& append(const std::string_view& stringName, int16_t v) { return append(stringName, eTypeNumberInt16, (const_pointer)&v, sizeof(int16_t)); }
@@ -675,6 +693,7 @@ public:
    arguments& append(const std::string_view& stringName, uint64_t v) { return append(stringName, eTypeNumberUInt64, (const_pointer)&v, sizeof(uint64_t)); }
    arguments& append(const std::string_view& stringName, float v) { return append(stringName, eTypeNumberFloat, (const_pointer)&v, sizeof(float)); }
    arguments& append(const std::string_view& stringName, double v) { return append(stringName, eTypeNumberDouble, (const_pointer)&v, sizeof(double)); }
+   arguments& append(const std::string_view& stringName, const char* v) { return append(stringName, (eTypeNumberString | eValueLength), (const_pointer)v, (unsigned int)strlen(v) + 1); }
    arguments& append(const std::string_view& stringName, const std::string_view& v) { return append(stringName, (eTypeNumberString | eValueLength), (const_pointer)v.data(), (unsigned int)v.length() + 1); }
    arguments& append(const std::string_view& stringName, std::wstring_view v) { return append(stringName, (eTypeNumberWString | eValueLength), (const_pointer)v.data(), ((unsigned int)v.length() + 1) * sizeof(wchar_t)); }
 #if defined(__cpp_char8_t)
@@ -692,6 +711,7 @@ public:
    arguments& append( const arguments& arguments_ );
    arguments& append( const std::vector<std::pair<std::string_view,std::string_view>>& vectorStringValue );
    arguments& append( const std::vector<std::pair<std::string,std::string>>& vectorStringValue );
+   arguments& append( const std::vector<std::pair<std::string,gd::variant>>& vectorStringVariant );
 
    std::pair<bool, std::string>  append( const std::string_view& stringValue, tag_parse );
 
@@ -724,7 +744,6 @@ public:
    arguments& append_argument( const std::vector< std::pair<std::string_view, gd::variant_view> >& vectorArgument, tag_view );
 
 
-
    arguments& append_binary( const uint8_t* puData, unsigned int uLength ) { return append(eTypeNumberBinary, puData, uLength); }
    arguments& append_binary(std::string_view stringName, const uint8_t* puData, unsigned int uLength) { return append(stringName, (eTypeNumberBinary | eValueLength), puData, uLength); }
    arguments& append_uuid( const uint8_t* puData ) { return append(eTypeNumberGuid, puData, 16); }
@@ -732,8 +751,11 @@ public:
 
    template<typename VALUE>
    arguments& append_if(const std::string_view& stringName, VALUE value );
-   //arguments& append_if(const std::string_view& stringName, const wchar_t* pwsz );
 
+   template<typename OBJECT>
+   arguments& append_object(const std::string_view& stringName, const OBJECT object );
+   template<typename OBJECT>
+   arguments& append_object( const OBJECT object ) { return append_object( std::string_view(), object ); }
 
    arguments& set(const std::string_view& stringName, std::nullptr_t) { return set(stringName, eTypeNumberBool, nullptr, 0); }
    arguments& set(const std::string_view& stringName, bool v) { return set(stringName, eTypeNumberBool, (const_pointer)&v, sizeof(bool)); }
@@ -891,6 +913,16 @@ public:
    gd::variant_view get_variant_view( const std::string_view& stringName ) const { return get_argument( stringName ).get_variant_view(); }
    [[nodiscard]] std::pair< std::string_view, gd::variant_view > get_variant_view(unsigned int uIndex, tag_pair ) const;
 //@}
+
+   template<typename OBJECT>
+   void get_object( const std::string_view& stringPrefixFind, OBJECT& object_ );
+   template<typename OBJECT>
+   void get_object( OBJECT& object_ ) { get_object( std::string_view(), object_ ); }
+   template<typename OBJECT>
+   OBJECT get_object();
+   template<typename OBJECT>
+   OBJECT get_object( const std::string_view& stringPrefixFind );
+
 
 /** \name PRINT
 * Methods used to format argument values into text
@@ -1143,6 +1175,13 @@ inline arguments& arguments::append( const std::vector<std::pair<std::string, st
    return *this;
 }
 
+/// append values from vector with variant items
+inline arguments& arguments::append( const std::vector<std::pair<std::string,gd::variant>>& vectorStringVariant ) {
+   for( auto it : vectorStringVariant ) append_argument( it.first, it.second );
+   return *this;
+}
+
+
 
 /// appends value if it is true (true, valid pointer, non 0 value for numbers, non empty strings)
 template<typename VALUE>
@@ -1157,6 +1196,44 @@ inline arguments& arguments::append_if(const std::string_view& stringName, VALUE
    }
    return *this;
 }
+
+/// append object, object need to implement `to_values` and static member called `to_member_name`
+template<typename OBJECT>
+inline arguments& arguments::append_object(const std::string_view& stringPrefixFind, const OBJECT object_) {
+   std::vector< gd::variant_view > vectorObject;
+   object_.to_values( vectorObject );
+   for(size_t uIndex = 0, uMax = vectorObject.size(); uIndex < uMax; uIndex++) {
+      std::string stringName = OBJECT::to_member_name( uIndex, stringPrefixFind );
+      append_argument( stringName, vectorObject.at( uIndex ) );
+   }
+   return *this;
+}
+
+template<typename OBJECT>
+inline void arguments::get_object(const std::string_view& stringPrefixFind, OBJECT& object_) {
+   std::vector< gd::variant_view > vector_;
+   for(unsigned uIndex = 0, uMax = OBJECT::to_member_count(); uIndex < uMax; uIndex++) {
+      std::string stringName = OBJECT::to_member_name( uIndex, stringPrefixFind );
+      vector_.push_back( get_argument( stringName ).as_variant_view() );
+   }
+   object_ = vector_;
+}
+
+template<typename OBJECT>
+inline OBJECT arguments::get_object() {
+   OBJECT object_;
+   get_object( object_ );
+   return object_;
+}
+
+template<typename OBJECT>
+inline OBJECT arguments::get_object( const std::string_view& stringPrefixFind ) {
+   OBJECT object_;
+   get_object( stringPrefixFind, object_ );
+   return object_;
+}
+
+
 
 
 // ================================================================================================

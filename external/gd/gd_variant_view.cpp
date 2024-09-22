@@ -1,4 +1,5 @@
 #include <charconv>
+#include <cmath>
 #include <cwchar>
 
 #include "gd_utf8.hpp"
@@ -304,26 +305,38 @@ std::string variant_view::get_string( gd::variant_type::tag_scientific ) const
       char pbszBuffer[32];
       sprintf( pbszBuffer, "%e", static_cast< double >(m_V.f) );
       return std::string( pbszBuffer );
-      }
-      break;
+   }
+   break;
    case eTypeNumberDouble      : {
       char pbszBuffer[40];
-      sprintf( pbszBuffer, "%e", m_V.d );
-      return std::string( pbszBuffer );
+      bool bExponent = false;
+      if(m_V.d != 0.0)
+      {
+         if( m_V.d > 10000 ) bExponent = true;
+         else
+         {
+            double dTest = std::round(m_V.d * 100000) / 100000;
+            if( dTest != m_V.d ) bExponent = true;
+         }
       }
-      break;
+      if( bExponent == true ) { sprintf( pbszBuffer, "%e", m_V.d ); }
+      else                    { sprintf( pbszBuffer, "%.9g", m_V.d ); }
+
+      return std::string( pbszBuffer );
+   }
+   break;
    case eTypeNumberGuid        : {  
       std::string stringHex;
       gd::utf8::print_hex( m_V.pb, m_V.pb + 16, stringHex );
       return stringHex;
-      }
-      break;
+   }
+   break;
    case eTypeNumberBinary      : {
       std::string stringHex;
       gd::utf8::print_hex( m_V.pb, m_V.pb + m_uSize, stringHex );
       return stringHex;
-      }
-      break;
+   }
+   break;
    case eTypeNumberUtf8String  : 
    case eTypeNumberString      : return std::string( m_V.pbsz, m_uSize ); 
    case eTypeNumberWString     : 

@@ -192,6 +192,27 @@ table_column_buffer::table_column_buffer( const table_column_buffer& o, uint64_t
    }
 }
 
+/// Copy constructor that copies selected rows from copied table
+table_column_buffer::table_column_buffer( const table_column_buffer& o, const std::vector<uint64_t> vectorRow )
+   : m_puData{}
+{
+   common_construct( o, tag_columns{} );
+
+   if( vectorRow.empty() == false )
+   {
+      uint64_t uRowCount = o.get_row_count();
+      row_reserve_add( vectorRow.size() );
+      for(auto itRow : vectorRow)
+      {
+         if(itRow < uRowCount)
+         {
+            append( o, itRow, 1 );
+         }
+      }
+   }
+}
+
+
 table_column_buffer::table_column_buffer(const table_column_buffer& o, const range& rangeCopy)
    : m_puData{}
 {
@@ -588,6 +609,17 @@ table_column_buffer& table_column_buffer::column_add( const table_column_buffer*
    return *this;
 }
 
+table_column_buffer& table_column_buffer::column_add(const std::vector< std::tuple< std::string, unsigned, std::string > >& vectorType, tag_type_name )
+{                                                                                                  assert( m_puData == nullptr );
+   for( auto it = std::begin( vectorType ), itEnd = std::end( vectorType ); it != itEnd; it++ )
+   {
+      column_add( std::get<0>(*it), std::get<1>(*it), std::get<2>(*it) );
+   }
+
+   return *this;
+}
+
+
 /** ---------------------------------------------------------------------------
  * @brief Add columns by parsing string with columns information to add
  * Adds columns to table by reading parse string. This string is formated in a way
@@ -641,6 +673,66 @@ std::pair<bool, std::string> table_column_buffer::column_add(const std::string_v
    }
 
    return { true, "" };
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief Add column after table has been prepared
+ * Table is regenerated with the added column, it will be copied into a new table 
+ * and values in old table is copied.
+ * @param columnToAdd column information for added column
+ * @return reference to table_column_buffer
+ */
+table_column_buffer& table_column_buffer::column_add(const column& columnToAdd, tag_prepare)
+{
+   table_column_buffer table_( *this, tag_columns{} );
+   table_.column_add( columnToAdd );
+   table_.set_reserved_row_count( get_reserved_row_count() );
+   table_.prepare();
+
+   table_.append( *this, 0, get_row_count() );
+
+   *this = std::move( table_ );
+
+   return *this;
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief Add column after table has been prepared
+ * @param uColumnType value type for column
+ * @param uSize if size isn't a fixed type then this is the max size for value
+ * @param stringName column name
+ * @param stringAlias column alias
+ * @return reference to table_column_buffer
+ */
+table_column_buffer& table_column_buffer::table_column_buffer::column_add(unsigned uColumnType, unsigned uSize, const std::string_view& stringName, const std::string_view& stringAlias, tag_prepare)
+{
+   table_column_buffer table_( *this, tag_columns{} );
+   table_.column_add( uColumnType, uSize, stringName, stringAlias );
+   table_.set_reserved_row_count( get_reserved_row_count() );
+   table_.prepare();
+
+   table_.append( *this, 0, get_row_count() );
+   *this = std::move( table_ );
+
+   return *this;
+}
+
+/** ---------------------------------------------------------------------------
+* @brief add columns after table has been prepared to table with none derived value types, size and name
+* @param vectorType vector with pair items "<type_name, column_name>".
+* @return reference to table_column_buffer to nest methods.
+*/
+table_column_buffer& table_column_buffer::column_add(const std::vector< std::tuple< std::string_view, unsigned, std::string_view > >& vectorType, tag_type_name, tag_prepare)
+{
+   table_column_buffer table_( *this, tag_columns{} );
+   table_.column_add( vectorType, tag_type_name{} );
+   table_.set_reserved_row_count( get_reserved_row_count() );
+   table_.prepare();
+
+   table_.append( *this, 0, get_row_count() );
+   *this = std::move( table_ );
+
+   return *this;
 }
 
 /** ---------------------------------------------------------------------------
@@ -1089,7 +1181,7 @@ table.prepare();
 std::vector<gd::variant_view> vectorValue = { {1},{2},{3} }; // three integer values
 table.row_add( vectorValue, gd::table::tag_convert{} );      // add values to row, values are converterd to proper type
 ~~~
- * @param listValue list of values inserted in added row
+ * @param vectorValue list of values inserted in added row
 */
 void table_column_buffer::row_add( const std::vector<gd::variant_view>& vectorValue, tag_convert )
 {                                                                                                  assert( vectorValue.size() <= get_column_count() );              
@@ -1099,6 +1191,21 @@ void table_column_buffer::row_add( const std::vector<gd::variant_view>& vectorVa
    
    row_set( uRow, vectorValue, tag_convert{} );
 }
+
+/** ---------------------------------------------------------------------------
+ * @brief Add row and set values from offset column in row, vector cant be larger offset minus number of columns
+ * @param uFirstColumn first column to start placing values
+ * @param vectorValue list of values inserted in added row 
+ */
+void table_column_buffer::row_add( unsigned uFirstColumn, const std::vector<gd::variant_view>& vectorValue, tag_convert )
+{                                                                                                  assert( vectorValue.size() <= get_column_count() );              
+   uint64_t uRow = m_uRowCount;
+
+   row_add();
+   
+   row_set( uRow, uFirstColumn, vectorValue, tag_convert{} );
+}
+
 
 /** ---------------------------------------------------------------------------
  * @brief add row and set values
@@ -1300,6 +1407,22 @@ void table_column_buffer::row_set( uint64_t uRow, const std::vector<gd::variant_
 void table_column_buffer::row_set( uint64_t uRow, const std::vector<gd::variant_view>& vectorValue, tag_convert )
 {                                                                                                  assert( uRow < m_uRowCount ); assert( vectorValue.size() <= get_column_count() );   
    unsigned uIndex = 0;
+   for( auto it = std::begin( vectorValue ), itEnd = std::end( vectorValue ); it != itEnd; ++it )
+   {
+      cell_set( uRow, uIndex, *it, tag_convert{});
+      uIndex++;
+   }
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief Set row values, if value type differ it tries to convert to type in column
+ * @param uRow row where values are set
+ * @param uFirstColumn row where values are set
+ * @param vectorValue vector of values inserted to specified row
+*/
+void table_column_buffer::row_set( uint64_t uRow, unsigned uFirstColumn, const std::vector<gd::variant_view>& vectorValue, tag_convert )
+{                                                                                                  assert( uRow < m_uRowCount ); assert( vectorValue.size() <= get_column_count() );   
+   unsigned uIndex = uFirstColumn;
    for( auto it = std::begin( vectorValue ), itEnd = std::end( vectorValue ); it != itEnd; ++it )
    {
       cell_set( uRow, uIndex, *it, tag_convert{});
@@ -2127,6 +2250,26 @@ std::vector<gd::variant_view> table_column_buffer::row_get_variant_view( uint64_
 /** ---------------------------------------------------------------------------
  * @brief Return row values in vector as variant view items
  * @param uRow index to row values are returned from
+ * @param uFirstColumn start column to read values from
+ * @param uCount number of column to return
+ * @return std::vector<const gd::variant_view> vector holding row values
+*/
+std::vector<gd::variant_view> table_column_buffer::row_get_variant_view( uint64_t uRow, unsigned uFirstColumn, unsigned uCount ) const
+{                                                                                                  assert( uRow < m_uReservedRowCount ); assert( uFirstColumn < get_column_count() ); assert( (uFirstColumn + uCount) <= get_column_count() );
+   std::vector<gd::variant_view> vectorValue;
+
+   for( auto u = 0u, uMax = (unsigned)m_vectorColumn.size(); u < uMax; u++ )
+   {
+      vectorValue.push_back( cell_get_variant_view( uRow, u ) );
+   }
+
+   return vectorValue;
+}
+
+
+/** ---------------------------------------------------------------------------
+ * @brief Return row values in vector as variant view items
+ * @param uRow index to row values are returned from
  * @param puIndex pointer to array with column index values harvested into vector
  * @param uSize number of values to harvest
  * @return std::vector<gd::variant_view> values from row
@@ -2663,7 +2806,7 @@ void table_column_buffer::column_fill( unsigned uColumn, const gd::variant_view&
  * @param uToRow to row index value are inserted to
 */
 void table_column_buffer::column_fill( unsigned uColumn, const gd::variant_view& variantviewValue, uint64_t uFromRow, uint64_t uToRow, tag_convert )
-{                                                                                                  assert( uFromRow >= 0 && uFromRow < m_uRowCount ); assert( uToRow >= 0 && uToRow <= m_uRowCount ); assert( uFromRow <= uToRow );
+{                                                                                                  assert( uFromRow >= 0 && uFromRow < get_row_count() ); assert( uToRow >= 0 && uToRow <= get_row_count() ); assert( uFromRow <= uToRow );
    const auto& columnSet = m_vectorColumn[uColumn];                                                assert( columnSet.position() < m_uRowSize );
    auto uColumnType = columnSet.ctype_number();
    gd::variant variantConvertTo;
@@ -2827,10 +2970,10 @@ void table_column_buffer::append( const table_column_buffer& tableFrom, tag_name
  * @param uCount number of rows to add
 */
 void table_column_buffer::append( const table_column_buffer& tableFrom, uint64_t uFrom, uint64_t uCount )
-{                                                                                                  assert( (uFrom + uCount) <= tableFrom.get_row_count() ); assert( get_column_count() == tableFrom.get_column_count() );
+{                                                                                                  assert( (uFrom + uCount) <= tableFrom.get_row_count() ); assert( get_column_count() >= tableFrom.get_column_count() );
    if( (get_row_count() + uCount) > m_uReservedRowCount ) row_reserve_add( uCount );
 
-   unsigned uColumnCount = get_column_count();
+   unsigned uColumnCount = tableFrom.get_column_count();
    for( uint64_t uRowFrom = uFrom, uEnd = uFrom + uCount; uRowFrom < uEnd; uRowFrom++ )
    {
       uint64_t uLastRow = get_row_count();

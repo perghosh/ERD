@@ -193,11 +193,11 @@ const uint8_t* csv::next_value( const uint8_t* puPosition, const uint8_t* pbszEn
 /// If not found return pointer is same as input pointer
 const char* next_character_g( const char* pbsz, char chFind )
 {
-   auto find_ = pbsz;   
-   while( (*find_ != '\0') && !(*find_ == chFind) ) find_++;
+   const char* pbszFind = pbsz;   
+   while( (*pbszFind != '\0') && !(*pbszFind == chFind) ) pbszFind++;
 
-   if( *find_ == '\0' ) return pbsz;
-   return find_;
+   if( *pbszFind == '\0' ) return pbsz;
+   return pbszFind;
 }
 
 /// Move to specified character
@@ -839,7 +839,7 @@ const char* skip_quoted_g( const char* pbsz )
 /// @code
 /// std::string_view stringTest = "123456'7890''123456'7890";
 /// auto p_ = next_character_g( stringTest, '\'' );								 REQUIRE( *p_ == '\'' );
-/// auto p1_ = skip_quoted_g( p_, stringTest._Unchecked_end(), "{*}" );	    REQUIRE( *(p1_ - 1) == '\'' );
+/// auto p1_ = skip_quoted_g( p_, stringTest.data() + stringTest.length(), "{*}" ); REQUIRE( *(p1_ - 1) == '\'' );
 /// @endcode
 const char* skip_quoted_g( const char* pbsz, const char* pbszEnd )
 {                                                                                                  assert( *pbsz == '\"' || *pbsz == '\'' || *pbsz == '`' );
@@ -864,6 +864,61 @@ const char* skip_quoted_g( const char* pbsz, const char* pbszEnd )
 
    return pbsz;
 }
+
+
+/// Skips quoted section, first character in string should be the quote that also ends quoted section
+/// move pointer past quoted section, if quote is escaped with "\"" character it will be skipped
+const char* skip_escaped_g( const char* pbsz )
+{                                                                                                  assert( *pbsz == '\"' || *pbsz == '\'' || *pbsz == '`' );
+   char chQuote = *pbsz;
+   pbsz++;
+   while( *pbsz != '\0' )
+   {
+      if( *pbsz != chQuote )
+      {
+         pbsz++;
+      }
+      else if( *(pbsz - 1) == '\\' )
+      {
+         pbsz++;
+      }
+      else
+      {
+         pbsz++;
+         break;
+      }
+   }
+
+   return pbsz;
+}
+
+/// Skips quoted section, first character in string should be the quote that also ends quoted section
+/// move pointer past quoted section, if quote is escaped with "\"" character it will be skipped
+const char* skip_escaped_g( const char* pbsz, const char* pbszEnd )
+{                                                                                                  assert( *pbsz == '\"' || *pbsz == '\'' || *pbsz == '`' );
+   char chQuote = *pbsz;
+   pbsz++;
+   while( pbsz < pbszEnd )
+   {
+      if( *pbsz != chQuote )
+      {
+         pbsz++;
+      }
+      else if( *(pbsz - 1) == '\\' )
+      {
+         pbsz++;
+      }
+      else
+      {
+         pbsz++;                                                               // move to character after quote
+         break;                                                                // end while loop, matching quote is found
+      }
+   }
+
+   return pbsz;
+}
+
+
 
 
 /// skips wild card search pattern if pattern is matched, no match will return original position in search text passed to method
@@ -1545,6 +1600,91 @@ const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFind, con
 }
 
 /** ---------------------------------------------------------------------------
+ * @brief find character similar to c-method `strchr` except here we are using line parsing rules used for sql strings
+ * @param pbszText text to search within
+ * @param chFind character to find
+ * @param json_rule json_rule object with rules on how to move in text
+ * @param puCharacterClass ascii text block (256 bytes) with character classes or null to use default
+ * @return pointer to character classes to know how to interpret characters 
+*/
+const char* strchr( const char* pbszText, char chFind, const json_rule& json_rule, const uint8_t* puCharacterClass )
+{
+   if( puCharacterClass == nullptr ) puCharacterClass = pCharacterClass_s;
+
+   const char* pbszPosition = pbszText;
+
+   while( *pbszPosition != '\0' && *pbszPosition != chFind )
+   {
+      if( !(puCharacterClass[*pbszPosition] & ASCII_TYPE_QUOTE) )
+      {
+         pbszPosition++;
+         continue;
+      }
+      else
+      {
+         if( json_rule.is_quote( *pbszPosition ) == true )
+         {
+            // ## found quote, text within quote is skipped
+            pbszPosition = skip_escaped_g( pbszPosition );
+         }
+         else
+         {
+            pbszPosition++;
+            continue;
+         }
+      }
+   }
+
+   if( *pbszPosition == chFind ) return pbszPosition;
+
+   return nullptr;
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief find character similar to c-method `strchr` except here we are using line parsing rules used for sql files
+ * @param pbszBegin start position for text to find character within
+ * @param pbszEnd last position in text
+ * @param chFind character to find
+ * @param json_rule json_rule object with rules on how to move in text
+ * @param puCharacterClass ascii text block (256 bytes) with character classes or null to use default
+ * @return pointer to character in text if found, nullptr if not found
+*/
+const char* strchr( const char* pbszBegin, const char* pbszEnd, char chFind, const json_rule& json_rule, const uint8_t* puCharacterClass )
+{                                                                                                  assert( pbszBegin <= pbszEnd );
+   if( puCharacterClass == nullptr ) puCharacterClass = pCharacterClass_s;
+
+   const char* pbszPosition = pbszBegin;  // position in text
+
+   while( pbszPosition < pbszEnd && *pbszPosition != chFind )
+   {
+      if( !(puCharacterClass[*pbszPosition] & ASCII_TYPE_QUOTE) )
+      {
+         pbszPosition++;
+         continue;
+      }
+      else
+      {
+         if( json_rule.is_quote( *pbszPosition ) == true )
+         {
+            // ## found quote, text within quote is skipped
+            pbszPosition = skip_escaped_g( pbszPosition );
+         }
+         else
+         {
+            pbszPosition++;
+            continue;
+         }
+      }
+   }
+
+   if( *pbszPosition == chFind ) return pbszPosition;                          // found character? return pointer
+
+   return nullptr;
+}
+
+
+
+/** ---------------------------------------------------------------------------
  * @brief Finds the first occurrence of the byte string needle in the byte string pointed to by haystack.
  * @param pbszBegin start of text (haystack) to find string (needle) in 
  * @param pbszEnd end of text
@@ -1734,6 +1874,106 @@ const char* strstr( const char* pbszBegin, const char* pbszEnd, const char* pbsz
 
    return nullptr;
 }
+
+/** ---------------------------------------------------------------------------
+ * @brief Find string in json formated text (strings are skipped and comments is not supported)
+ * @param pbszBegin start of json text
+ * @param pbszEnd end of json text
+ * @param pbszFind start of string to find
+ * @param uLength length of string to find
+ * @param json_rule json logic to know how to find in json text
+ * @param puCharacterClass ascii text block (256 bytes) with character classes or null to use default
+ * @return pointer to name if found, nullptr if not found
+ */
+const char* strstr(const char* pbszBegin, const char* pbszEnd, const char* pbszFind, unsigned uLength, const json_rule& json_rule, const uint8_t* puCharacterClass)
+{
+   if( puCharacterClass == nullptr ) puCharacterClass = pCharacterClass_s;
+
+   const char* pbszPosition = pbszBegin;   // position in text
+   char chFind = *pbszFind;                // first character in text to find
+
+   pbszFind++;    // No need to compare first character
+   uLength--;     // decrease length that is used when we compare rest after first character has been found
+
+   while( pbszPosition < pbszEnd )
+   {
+      if( *pbszPosition != chFind )
+      {
+         if( !(puCharacterClass[*pbszPosition] & ASCII_TYPE_QUOTE) )
+         {
+            pbszPosition++;
+            continue;
+         }
+         else
+         {
+            if( json_rule.is_quote( *pbszPosition ) == true )
+            {
+               // ## found quote, text within quote is skipped
+               pbszPosition = skip_escaped_g( pbszPosition );
+            }
+            else
+            {
+               pbszPosition++;
+               continue;
+            }
+         }
+      }
+      else
+      {
+         if( memcmp( pbszPosition + 1, pbszFind, uLength ) == 0 ) return pbszPosition; // found text? return pointer to text
+
+         pbszPosition++;
+      }
+   }
+
+   return nullptr;
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief Copy char buffer into string, stops copying when buffer ends or stop character is found
+ * @param pbszText text to copy from
+ * @param stringCopy string to copy to
+ * @param chCopyTo stop copy
+ * @return position to text position where copying ended
+ */
+const char* strcpy( const char* pbszText, std::string& stringCopy, char chCopyTo ) 
+{
+   const char* pbszPosition = pbszText;
+   while( *pbszPosition != '\0' && *pbszPosition != chCopyTo )
+   {
+      stringCopy += *pbszPosition;
+      pbszPosition++;
+   }
+    
+   return pbszPosition;
+}
+
+/** ---------------------------------------------------------------------------
+ * @brief Copy char buffer into string, stops copying when buffer ends or stop character is found
+ * @param pbszText text to copy from
+ * @param stringCopy string to copy to
+ * @param vectorCopyTo vector with characters to check for if stop copying
+ * @return position to text position where copying ended
+ */
+const char* strcpy( const char* pbszText, std::string& stringCopy, const std::vector<char>& vectorCopyTo )
+{
+   bool bCopy = true;
+   const char* pbszPosition = pbszText;
+   while( bCopy == true && *pbszPosition != '\0' )
+   {
+      for( auto it : vectorCopyTo )
+      {
+         if( *pbszPosition == it ) { bCopy = false; }
+      }
+
+      if( bCopy == true ) { stringCopy += *pbszPosition; }
+
+      pbszPosition++;
+   }
+    
+   return pbszPosition;
+}
+
 
 void strchr_for_each( const std::string_view& stringSql, char chFind, const sql& sql, const uint8_t* puCharacterClass, std::function<const char*( const std::string_view&, int )> callback_ )
 {                                                                                                  
@@ -1927,65 +2167,78 @@ std::pair<bool, const char*> read_line_g(
  * @param vectorPart 
  * @param csv 
  */
-void split_g(const std::string_view& stringText, const std::string_view& stringSplit, std::vector<std::string>& vectorPart, const csv& csv)
-{                                                                                                  assert(stringSplit.length() > 0);
-   std::string stringPart;                // Store string parts added to vector
-   auto uLength = stringSplit.length();   // Split string lenght
-   const uint8_t* pubszSplitWith = reinterpret_cast<const uint8_t*>(stringSplit.data()); // help compiler to optimize ?
+void split_g(const std::string_view &stringText,
+             const std::string_view &stringSplit,
+             std::vector<std::string> &vectorPart, const csv &csv) {
+    assert(stringSplit.length() > 0);
+    std::string stringPart;              // Store string parts added to vector
+    auto uLength = stringSplit.length(); // Split string lenght
+    const uint8_t *pubszSplitWith = reinterpret_cast<const uint8_t *>(
+        stringSplit.data()); // help compiler to optimize ?
 
-   const uint8_t* pubszPosition = reinterpret_cast<const uint8_t*>(stringText.data()); // start of text
-   const uint8_t* pubszTextEnd = reinterpret_cast<const uint8_t*>(stringText.data() + stringText.length()); // end of text
-   while(pubszPosition != pubszTextEnd)
-   {                                                                                               assert(pubszPosition < pubszTextEnd); assert(*pubszPosition != 0);
-      // No split character?
-      if(*pubszPosition != *pubszSplitWith)
-      {
-         if(csv.is_quote(*pubszPosition) == true)                              // check for csv quote
-         {                                                                     // csv quote is found, read complete quoted value
-            std::string_view stringValue;
-            pubszPosition = (const uint8_t*)read_quoted_g( (char*)pubszPosition, (char*)pubszTextEnd, stringValue );
-            if( pubszPosition != pubszTextEnd )
-            {
-               pubszPosition++;                                                // move past separator (otherwise it is some sort of format error)
-               vectorPart.emplace_back(stringValue);                           // append value to vector
+    const uint8_t *pubszPosition =
+        reinterpret_cast<const uint8_t *>(stringText.data()); // start of text
+    const uint8_t *pubszTextEnd = reinterpret_cast<const uint8_t *>(
+        stringText.data() + stringText.length()); // end of text
+    while (pubszPosition != pubszTextEnd) {
+        assert(pubszPosition < pubszTextEnd);
+        assert(*pubszPosition != 0);
+        // No split character?
+        if (*pubszPosition != *pubszSplitWith) {
+            if (csv.is_quote(*pubszPosition) == true) // check for csv quote
+            { // csv quote is found, read complete quoted value
+                std::string_view stringValue;
+                pubszPosition = (const uint8_t *)read_quoted_g(
+                    (char *)pubszPosition, (char *)pubszTextEnd, stringValue);
+                if (pubszPosition != pubszTextEnd) {
+                    pubszPosition++; // move past separator (otherwise it is
+                                     // some sort of format error)
+                    vectorPart.emplace_back(
+                        stringValue); // append value to vector
+                }
+            } else {
+                const char *pbegin_ = (const char *)pubszPosition;
+                while (pubszPosition != pubszTextEnd &&
+                       *pubszPosition != *pubszSplitWith)
+                    pubszPosition++;
+
+                stringPart.append(
+                    pbegin_,
+                    pubszPosition -
+                        decltype(pubszPosition)(
+                            pbegin_)); // add value to string part that is added
+                                       // when splitter is found
             }
-         }
-         else
-         {
-            const char* pbegin_ = (const char*)pubszPosition;
-            while( pubszPosition != pubszTextEnd && *pubszPosition != *pubszSplitWith) pubszPosition++;
+        }
+        // Compare if split text sequence is found
+        else if (*pubszPosition == *pubszSplitWith) {
+            bool bFoundSplitter = true;
+            // if only one character is used to split than skip all these
+            // characters if there are more than one
+            if (uLength == 1) {
+                while (pubszPosition != pubszTextEnd &&
+                       *pubszPosition == *pubszSplitWith)
+                    pubszPosition++;
+            } else if (memcmp((void *)pubszPosition, (void *)pubszSplitWith,
+                              uLength) == 0) {
+                pubszPosition += uLength;
+            } else {
+                bFoundSplitter = false;
+                stringPart += *pubszPosition;
+            }
 
-            stringPart.append( pbegin_, pubszPosition - decltype(pubszPosition)( pbegin_ ) );      // add value to string part that is added when splitter is found
-         }
-      }
-      // Compare if split text sequence is found
-      else if(*pubszPosition == *pubszSplitWith)
-      {
-         bool bFoundSplitter = true;
-         // if only one character is used to split than skip all these characters if there are more than one
-         if( uLength == 1 )
-         {
-            while( pubszPosition != pubszTextEnd && *pubszPosition == *pubszSplitWith) pubszPosition++;
-         }
-         else if( memcmp((void*)pubszPosition, (void*)pubszSplitWith, uLength) == 0 )
-         {
-            pubszPosition += uLength;
-         }
-         else
-         {
-            bFoundSplitter = false;
-            stringPart += *pubszPosition;
-         }
+            if (bFoundSplitter == true) // if splitter is found then add string
+                                        // part to vector and clear it
+            {
+                vectorPart.emplace_back(stringPart);
+                stringPart.clear();
+            }
+        }
+    }
 
-         if(bFoundSplitter == true)                                            // if splitter is found then add string part to vector and clear it
-         {
-            vectorPart.emplace_back(stringPart);
-            stringPart.clear();
-         }
-      }
-   }
-
-   if(stringPart.empty() == false) { vectorPart.emplace_back(stringPart); }    // add last part if any
+    if (stringPart.empty() == false) {
+        vectorPart.emplace_back(stringPart);
+    } // add last part if any
 }
 
 /** ---------------------------------------------------------------------------

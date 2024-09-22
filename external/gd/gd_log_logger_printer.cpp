@@ -38,8 +38,10 @@
 
 #if defined( __clang__ )
    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+   #pragma clang diagnostic ignored "-Wswitch"
 #elif defined( __GNUC__ )
    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+   #pragma GCC diagnostic ignored "-Wswitch"
 #elif defined( _MSC_VER )
    #pragma warning( disable : 4996  )
 #endif

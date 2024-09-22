@@ -819,6 +819,9 @@ namespace gd {
          return vectorPart;
       }
 
+      const char* split( const char* pbBegin, const char* pbEnd, char chSplit, char chStop, std::vector<std::string_view>& vectorPart );
+      std::string_view split( const std::string_view& stringText, char chSplit, char chStop, std::vector<std::string_view>& vectorPart );
+
       // ## mid methods, select text between something
 
       /// get mid section and if pair pointer is sent the mark where mid section is extracted from

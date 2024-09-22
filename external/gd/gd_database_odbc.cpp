@@ -180,6 +180,30 @@ std::pair<bool, std::string> database::execute( const std::string_view& stringSt
 }
 
 /** ---------------------------------------------------------------------------
+ * @brief Ask for single value from sql statement
+ * @param stringStatement string to execute that should returan at least one value
+ * @param pvariantValue pointer to variant that gets value from statement
+ * @return true if ok, false and error information on error
+ */
+std::pair<bool, std::string> database::ask( const std::string_view& stringStatement, gd::variant* pvariantValue )
+{                                                                                                  assert( is_open() );
+   cursor cursorAsk( this );
+   auto [ bOk, stringError ] = cursorAsk.prepare( stringStatement );                               assert( bOk == true );
+   if( bOk == false ) return { false, stringError };
+
+   auto result_ = cursorAsk.open();
+   if( result_.first == false ) return result_;
+
+   if( cursorAsk.is_valid_row() && pvariantValue != nullptr )
+   {
+      *pvariantValue = cursorAsk.get_record()->get_variant( 0 );
+   }
+
+   return { true, "" };
+
+}
+
+/** ---------------------------------------------------------------------------
  * @brief close database connection
 */
 void database::close()
@@ -1169,6 +1193,11 @@ std::pair<bool, std::string> database_i::open( const gd::argument::arguments& ar
 std::pair<bool, std::string> database_i::execute( const std::string_view& stringStatement )
 {                                                                                                  assert( m_pdatabase != nullptr );
    return m_pdatabase->execute( stringStatement );
+}
+
+std::pair<bool, std::string> database_i::ask( const std::string_view& stringStatement, gd::variant* pvariantValue )
+{                                                                                                  assert( m_pdatabase != nullptr );
+   return m_pdatabase->ask( stringStatement, pvariantValue );
 }
 
 std::pair<bool, std::string> database_i::get_cursor( gd::database::cursor_i** ppCursor )

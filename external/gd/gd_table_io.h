@@ -79,10 +79,21 @@ bool format_if( const std::string_view& stringText, std::string& stringNew, tag_
 
 // ## CSV IO ------------------------------------------------------------------
 
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_csv );
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_csv );
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_csv );
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_csv );
 
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, bool (*format_text_)(unsigned uColumn, unsigned uType, const gd::variant_view&, std::string& stringNew), std::string& stringOut, tag_io_csv );
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_csv) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), format_text_, stringOut, tag_io_csv{});
+}
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_csv) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), format_text_, stringOut, tag_io_header{}, tag_io_csv{});
+}
+
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, bool (*format_text_)(unsigned uColumn, unsigned uType, const gd::variant_view&, std::string& stringNew), std::string& stringOut, tag_io_csv );
+
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, bool ( *pformat_text_ )( unsigned uColumn, unsigned uType, const gd::variant_view&, std::string& stringNew ), std::string& stringOut, tag_io_csv) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), pformat_text_, stringOut, tag_io_csv{});
+}
 
 // ### read csv information into table
 std::pair<bool, const char*> read_g( dto::table& table, const std::string_view& stringCsv, char chSeparator, char chNewLine, tag_io_csv );
@@ -94,8 +105,18 @@ std::pair<bool, const char*> read_g( std::vector<std::string>& vectorHeader, con
 
 // ## JSON IO -----------------------------------------------------------------
 
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json );
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json );
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json );
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json );
+
+void to_string( const dto::table& table, const std::vector<uint64_t>& vectorRow, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json );
+void to_string( const dto::table& table, const std::vector<uint64_t>& vectorRow, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json );
+
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), format_text_, stringOut, tag_io_json{});
+}
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_header, tag_io_json) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), format_text_, stringOut, tag_io_header{}, tag_io_json{});
+}
 
 inline void to_string( const dto::table& table, const std::function<bool( const std::string_view&, std::string& stringNew )>& format_text_, std::string& stringOut, tag_io_json ) {
    to_string( table, uint64_t(0), table.get_row_count(), format_text_, stringOut, tag_io_json{});
@@ -121,7 +142,13 @@ inline std::string to_string( const dto::table& table, tag_io_header, tag_io_jso
    return stringOut;
 }
 
-void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json, tag_io_name );
+/// print table values as json where each object on row is placed in json object with name, not as json array
+void to_string( const dto::table& table, uint64_t uBegin, uint64_t uCount, const gd::argument::arguments& argumentsOption, const std::function<bool (const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json, tag_io_name );
+
+inline void to_string(const dto::table& table, uint64_t uBegin, uint64_t uCount, const std::function<bool(const std::string_view&, std::string& stringNew)>& format_text_, std::string& stringOut, tag_io_json, tag_io_name) {
+   return to_string( table, uBegin, uCount, gd::argument::arguments(), format_text_, stringOut, tag_io_header{}, tag_io_json{});
+}
+
 inline void to_string( const dto::table& table, const std::function<bool( const std::string_view&, std::string& stringNew )>& format_text_, std::string& stringOut, tag_io_json, tag_io_name ) {
    to_string( table, uint64_t(0), table.get_row_count(), format_text_, stringOut, tag_io_json{}, tag_io_name{});
 }
@@ -298,6 +325,8 @@ inline void write_insert_g(const std::string_view& stringTableName, const dto::t
 inline void write_insert_g(const std::string_view& stringTableName, const dto::table& table, const std::vector<unsigned>& vectorColumn, std::string& stringInsert, const gd::argument::arguments& argumentsOption, tag_io_sql) {
    write_insert_g( stringTableName, table, 0, table.get_row_count(), vectorColumn, stringInsert, argumentsOption, tag_io_sql{});
 }
+
+void write_insert_g( const std::string_view& stringTableName, const dto::table& table, const std::vector<uint64_t>& vectorRow, const std::vector<unsigned>& vectorColumn, std::string& stringInsert, const gd::argument::arguments& argumentsOption, tag_io_sql );
 /// @}
 
 

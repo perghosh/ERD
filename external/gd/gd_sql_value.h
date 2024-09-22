@@ -27,7 +27,8 @@
 _GD_SQL_QUERY_BEGIN
 
 struct tag_raw {};                                                             // tag dispatcher setting data without internal logic
-struct tag_brace {};                                                             // tag dispatcher setting data without internal logic
+struct tag_brace {};                                                           // tag dispatcher setting data without internal logic
+struct tag_keep_not_found{};                                                   // tag for methods to keep something if not found/missing
 
 /// Append ascii text as utf8 to string
 void append_ascii( const uint8_t* pbszAscii, std::string& stringSql );
@@ -46,5 +47,6 @@ inline void append_g( const gd::variant& variantValue, std::string& stringSql, t
 std::tuple<uint64_t,std::string,std::string> make_bulk_g( const std::string_view& stringFixed, const std::string_view& stringParameter, uint64_t uCount, uint64_t uBulkCount );
 
 std::string replace_g( const std::string_view& stringSource, const gd::argument::arguments& argumentsValue, tag_brace );
+std::string replace_g( const std::string_view& stringSource, const gd::argument::arguments& argumentsValue, tag_brace, tag_keep_not_found );
 
 _GD_SQL_QUERY_END

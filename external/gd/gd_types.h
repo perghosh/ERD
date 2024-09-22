@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <stdint.h>
+#include <string>
 #include <string_view>
 #include <vector>
 

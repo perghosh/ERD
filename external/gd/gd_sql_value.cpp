@@ -9,7 +9,8 @@
 #if defined( __clang__ )
    #pragma clang diagnostic ignored "-Wswitch"
    #pragma clang diagnostic ignored "-Wformat"
-#elif defined( __GNUC__ )
+   #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+   #elif defined( __GNUC__ )
    #pragma GCC diagnostic ignored "-Wswitch"
    #pragma GCC diagnostic ignored "-Wformat"
 #elif defined( _MSC_VER )
@@ -585,9 +586,9 @@ std::string replace_g(const std::string_view& stringSource, const gd::argument::
       {
          if(*it != '\'' ) stringNew += *it;                                    // no quote then copy character
          else
-         {
+         {                                                                     // string is found, when in string we need to copy until end of string is found
             const char* pbszFind = &(*it) + 1; 
-            pbszFind = gd::parse::strchr( pbszFind, '\'', gd::parse::sql{} );
+            pbszFind = gd::parse::strchr( pbszFind, '\'', gd::parse::sql{} );  // method used to find last quote, this method knows how to skip double quoutes
             if(pbszFind != nullptr && pbszFind <= &(*(itEnd - 1)))
             {
                auto uSize = (pbszFind - &(*it));
@@ -596,7 +597,7 @@ std::string replace_g(const std::string_view& stringSource, const gd::argument::
             }
             else
             {
-               return stringNew;
+               return stringNew;                                               // end of string not found, return text
             }
          }
       }
@@ -655,5 +656,113 @@ std::string replace_g(const std::string_view& stringSource, const gd::argument::
 
    return stringNew;
 }
+
+/** --------------------------------------------------------------------------- format `replace_g`
+ * @brief replace value with sql formating, if argument to replace is not found then old replacement identifier is kept
+ * @code
+std::string stringTemplate = "...{=one}...{=one1}...{=one}...{=one}..";
+auto string1 = gd::sql::replace_g( stringTemplate, {{"one1","111"}}, gd::sql::tag_brace{}, gd::sql::tag_keep_not_found{} );
+REQUIRE( string1 == "...{=one}...111...{=one}...{=one}.." );
+ * @endcode
+ * @param stringSource string with values to replace
+ * @param argumentsValue arguments that holds values to replace with
+ * @return  std::string string with replaced values
+ */
+std::string replace_g(const std::string_view& stringSource, const gd::argument::arguments& argumentsValue, tag_brace, tag_keep_not_found )
+{
+   using namespace gd::types;
+
+   unsigned uArgumentIndex = 0;
+   std::string stringName;       // current variable name that is replaced
+   std::string stringNew;        // new created string
+
+   for(auto it = std::begin( stringSource ), itEnd = std::end( stringSource ); it != itEnd; it++ )
+   {
+      if(*it != '{')
+      {
+         if(*it != '\'' ) stringNew += *it;                                    // no quote then copy character
+         else
+         {                                                                     // string is found, when in string we need to copy until end of string is found
+            const char* pbszFind = &(*it) + 1; 
+            pbszFind = gd::parse::strchr( pbszFind, '\'', gd::parse::sql{} );  // method used to find last quote, this method knows how to skip double quoutes
+            if(pbszFind != nullptr && pbszFind <= &(*(itEnd - 1)))
+            {
+               auto uSize = (pbszFind - &(*it));
+               stringNew.append( &(*it), uSize + 1);                           // append text including first quote (note + 1)
+               it += uSize;
+            }
+            else
+            {
+               return stringNew;                                               // end of string not found, return text
+            }
+         }
+      }
+      else
+      {
+         const char* pbszFromKeep = &(*it);                                    // keep start position if name for template argument isnt found and therefore kept
+         stringName.clear();
+         it++;
+         while(*it != '}' && it != itEnd)
+         {
+            stringName += *it;
+            it++;
+         }
+
+         // store old part if no replace value is found for name, then this should be kept
+         std::string_view stringKeepOld( pbszFromKeep, stringName.length() + 2 ); // 2 = sizeof("{}") - zero terminator
+
+         if(*it == '}')
+         {
+            bool bRaw = false;
+            gd::variant_view v_;
+
+            if(stringName.empty() == false)
+            {
+               char chFirst = stringName.at( 0 );                              // get first character
+               if(chFirst == '=')
+               {
+                  bRaw = true;
+                  stringName.erase( stringName.begin() );                      // remove equal charact
+               }
+            }
+
+            if(stringName.empty() == true)
+            {
+               v_ = argumentsValue[uArgumentIndex].as_variant_view();
+               uArgumentIndex++;
+            }
+            else
+            {
+               // ## investigate type of name
+               char chFirst = stringName.at( 0 );                              // get first character
+
+
+               if( is_ctype_g( chFirst, "digit"_ctype ) == true)               // is value a number
+               {
+                  unsigned uIndex = std::stoul( stringName );                                   assert( uIndex < 0xffff ); //realistic ??
+                  v_ = argumentsValue[uIndex].as_variant_view();
+               }
+               else
+               {
+                  v_ = argumentsValue[stringName].as_variant_view();
+               }
+            }
+
+            if( v_.is_null() == false )
+            {
+               if( bRaw == false ) append_g( v_, stringNew );                  // add value to work in sql
+               else                append_g( v_, stringNew, gd::sql::tag_raw{});// add value to string without fix for quotes if needed for value
+            }
+            else
+            {
+               stringNew += stringKeepOld;
+            }
+         }// if(*it == '}') {
+      }
+   }// for(auto it = std::begin( stringSource ...
+
+   return stringNew;
+}
+
 
 _GD_SQL_QUERY_END

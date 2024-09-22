@@ -509,14 +509,20 @@ public:
    void row_set_range( uint64_t uRow, const gd::variant_view variantviewSet, tag_convert ) { row_set_range( uRow, 0, get_column_count(), variantviewSet, tag_convert{}); }
    void row_set_range( uint64_t uRow, unsigned uStartColumn, unsigned uCount, const gd::variant_view variantviewSet, tag_convert );
    ///@}
-
-   /// @name row_delete
-   /// deletes row/rows in table
+  
+   /// @name row_clear
+   /// clears all rows in table
    ///@{
-   /// Deletes all rows in table (just set the row count to 0)
-   void row_delete() { m_uRowCount = 0; }
+   /// Clears all rows in table (just set the row count to 0)
+   void row_clear() { m_uRowCount = 0; }
    ///@}
 
+    /// @name row_delete
+   /// deletes last row in table
+   ///@{
+   /// Deletes last row in table (by decreasing the row count)
+   void row_delete() { if (m_uRowCount > 0) m_uRowCount--; }
+   ///@}
 
    /// @name row_reserve_add
    /// reserve memory to store more rows in table

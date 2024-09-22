@@ -2657,6 +2657,53 @@ namespace gd {
          if( uPosition < uTextSize ) { vectorPart.push_back( std::string( pbBegin + uPosition, uTextSize - uPosition ) ); }
       }
 
+      /** ---------------------------------------------------------------------
+       * @brief Split parts into string_view objects placed in vector
+       * @param pbBegin start of string that is splitted
+       * @param pbEnd end of string
+       * @param chSplit split character
+       * @param chStop character to mark end to find more words to split
+       * @param vectorPart 
+       * @return vector where strings are stored
+       */
+      const char* split( const char* pbBegin, const char* pbEnd, char chSplit, char chStop, std::vector<std::string_view>& vectorPart )      
+      {
+         const char* pbTo;
+         const char* pbFrom = pbBegin;
+         const char* pbPosition = pbBegin;
+
+         for( ; pbPosition != pbEnd && *pbPosition != chStop; pbPosition++ )
+         {
+            if( *pbPosition == chSplit )
+            {
+               pbTo = pbPosition;
+               std::size_t uLength = pbTo - pbFrom;
+               vectorPart.push_back(std::string_view{ pbFrom, uLength });
+               pbFrom = pbTo + 1;
+            }
+         }
+
+         if(pbPosition != pbFrom)
+         {
+            pbTo = pbPosition;
+            std::size_t uLength = pbTo - pbFrom;
+            vectorPart.push_back(std::string_view{ pbFrom, std::size_t(pbTo - pbFrom) });
+         }
+
+         if( pbPosition != pbEnd && *pbPosition == chStop ) { pbPosition++; }     // pass stop character
+                                                                                                   assert( pbPosition <= pbEnd );
+         return pbPosition;
+      }
+
+      /// `split` wrapper that takes a string_view and returns string_view
+      std::string_view split( const std::string_view& stringText, char chSplit, char chStop, std::vector<std::string_view>& vectorPart )
+      {
+         const char* pbszEnd = stringText.data() + stringText.length();
+         const char* pbsz_ = split( stringText.data(), stringText.data() + stringText.length(), chSplit, chStop, vectorPart  );
+
+         return std::string_view( pbsz_, pbszEnd - pbsz_ );
+      }
+
 
       /** ---------------------------------------------------------------------
        * @brief Extract text betweend selected characters

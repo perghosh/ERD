@@ -208,6 +208,7 @@ public:
 
    template <typename VALUE>
    void add_value( const option* poption, const VALUE& v ) { assert( poption != nullptr ); add_value( poption->name(), v); }
+   void add_value( const std::string_view& stringName, const char* pbszValue ) { m_argumentsValue.append( stringName, pbszValue ); }
    template <typename VALUE>
    void add_value( const std::string_view& stringName, const VALUE& v ) { m_argumentsValue.append( stringName, v ); }
 

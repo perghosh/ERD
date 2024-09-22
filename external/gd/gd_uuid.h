@@ -95,6 +95,7 @@ public:
    uuid& operator=( const uint8_t* p );
    /// assign to hexadecimal string
    uuid& operator=( const char* pbszHex ) { read( (const value_type*)pbszHex, (const value_type*)(pbszHex + 32) ); return *this; }
+   uuid& operator=( const std::string_view& stringUuid ) { read( (const value_type*)stringUuid.data(), (const value_type*)stringUuid.data() + stringUuid.length() ); return *this; }
 
    /// pointer operator to get buffer pointer
    operator const uint8_t*() const noexcept { return m_pbData; }

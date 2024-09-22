@@ -1,6 +1,17 @@
+## GD (General development)
+
+Code in the gd namespace can't be dependent of anything external, only core C++ is needed to use gd code.
+There are some database objects that is turned on based on macros but the rest is default c++.
+
+### Main files
+`gd_types.h` - the type system for gd is found here, constants etc  
+`gd_variant.h` and `gd_variant_view.h` - these are the main value objects that is used to store values  
+`gd_arguments.h` - Stores values as named arguments, each value can have an name. 
+
 
 | File | Description |
 | - | - |
+| `gd_arguments` | Named arguments object. Values are stored with name in a byte array (cache friendly)  |
 | `gd_sql_value` | Format C++ string for use in SQL statements, methods like append, replace and more to manipulate strings |
 | `gd_table_column-buffer` | Table object optimized for use as dto object, transfer table data or work with table data on the fly and then delete it |
 | `gd_table_table` | Table object optimized to store member data for some C++ object  |
